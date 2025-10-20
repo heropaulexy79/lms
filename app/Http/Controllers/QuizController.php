@@ -39,7 +39,7 @@ class QuizController extends Controller
                 'difficulty' => 'nullable|in:easy,medium,hard',
                 'is_published' => 'nullable|boolean',
                 'reference_resources' => 'nullable|array',
-                'reference_resources.*' => 'exists:resources,id',
+                'reference_resources.*' => 'uuid|exists:resources,id'
             ]);
 
             if ($validator->fails()) {
