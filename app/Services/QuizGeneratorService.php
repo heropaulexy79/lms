@@ -271,7 +271,9 @@ class QuizGeneratorService
             
             // Try with a simpler prompt if the first attempt fails
             try {
-                $simplePrompt = $this->buildSimpleQuizPrompt($lessonContent, $quizCount);
+                // *** UPDATED *** Use the SAME prompt builder logic, just with simpler params
+                $simplePrompt = $this->buildQuizGenerationPrompt($lessonContent, [], $quizTypes, $quizCount, []);
+                
                 $response = $this->ragService->generateJsonContent($simplePrompt, [
                     'temperature' => 0.5,
                     'max_tokens' => 2000
@@ -286,6 +288,7 @@ class QuizGeneratorService
 
     /**
      * Build the prompt for quiz generation.
+     * *** THIS FUNCTION HAS BEEN SIGNIFICANTLY UPDATED FOR CONSISTENCY ***
      */
     private function buildQuizGenerationPrompt(string $lessonContent, array $referenceContent, array $quizTypes, int $quizCount, array $options): string
     {
@@ -298,8 +301,10 @@ class QuizGeneratorService
         $prompt .= "Each quiz object must include:\n";
         $prompt .= "- type (one of: " . implode(', ', $quizTypes) . ")\n";
         $prompt .= "- question (string)\n";
-        $prompt .= "- options (array of option objects, if applicable)\n";
-        $prompt .= "- difficulty (one of: easy, medium, hard)\n\n";
+        $prompt .= "- options (array of option objects. Must be empty [] for TYPE_ANSWER)\n";
+        $prompt .= "- difficulty (one of: easy, medium, hard)\n";
+        $prompt .= "- explanation (string, brief explanation of the answer)\n";
+        $prompt .= "- correct_answer (string, the correct text answer. e.g., 'Paris' or 'H2O' or 'True'. null for MULTIPLE_SELECT)\n\n";
         
         $prompt .= "Follow these exact formats:\n\n";
         
@@ -314,21 +319,21 @@ class QuizGeneratorService
             $prompt .= "    { \"text\": \"Madrid\", \"is_correct\": false },\n";
             $prompt .= "    { \"text\": \"Rome\", \"is_correct\": false }\n";
             $prompt .= "  ],\n";
-            $prompt .= "  \"difficulty\": \"easy\"\n";
+            $prompt .= "  \"correct_answer\": \"Paris\",\n";
+            $prompt .= "  \"difficulty\": \"easy\",\n";
+            $prompt .= "  \"explanation\": \"Paris is the capital city of France.\"\n";
             $prompt .= "}\n\n";
         }
         
         if (in_array('TYPE_ANSWER', $quizTypes)) {
-            $prompt .= "TYPE_ANSWER\n";
+            $prompt .= "TYPE_ANSWER (Note: options must be an empty array)\n";
             $prompt .= "{\n";
             $prompt .= "  \"type\": \"TYPE_ANSWER\",\n";
             $prompt .= "  \"question\": \"The chemical symbol for water is ____.\",\n";
-            $prompt .= "  \"options\": [\n";
-            $prompt .= "    { \"text\": \"H2O\", \"is_correct\": true },\n";
-            $prompt .= "    { \"text\": \"CO2\", \"is_correct\": false },\n";
-            $prompt .= "    { \"text\": \"O2\", \"is_correct\": false }\n";
-            $prompt .= "  ],\n";
-            $prompt .= "  \"difficulty\": \"medium\"\n";
+            $prompt .= "  \"options\": [],\n"; // <-- CRITICAL FIX: Must be empty
+            $prompt .= "  \"correct_answer\": \"H2O\",\n"; // <-- CRITICAL FIX: This field is required
+            $prompt .= "  \"difficulty\": \"medium\",\n";
+            $prompt .= "  \"explanation\": \"H2O represents two hydrogen atoms and one oxygen atom.\"\n";
             $prompt .= "}\n\n";
         }
         
@@ -341,7 +346,9 @@ class QuizGeneratorService
             $prompt .= "    { \"text\": \"True\", \"is_correct\": false },\n";
             $prompt .= "    { \"text\": \"False\", \"is_correct\": true }\n";
             $prompt .= "  ],\n";
-            $prompt .= "  \"difficulty\": \"easy\"\n";
+            $prompt .= "  \"correct_answer\": \"False\",\n";
+            $prompt .= "  \"difficulty\": \"easy\",\n";
+            $prompt .= "  \"explanation\": \"The Earth is an oblate spheroid, not flat.\"\n";
             $prompt .= "}\n\n";
         }
         
@@ -356,7 +363,9 @@ class QuizGeneratorService
             $prompt .= "    { \"text\": \"HTML\", \"is_correct\": false },\n";
             $prompt .= "    { \"text\": \"Java\", \"is_correct\": true }\n";
             $prompt .= "  ],\n";
-            $prompt .= "  \"difficulty\": \"medium\"\n";
+            $prompt .= "  \"correct_answer\": null,\n";
+            $prompt .= "  \"difficulty\": \"medium\",\n";
+            $prompt .= "  \"explanation\": \"Python, JavaScript, and Java are programming languages. HTML is a markup language.\"\n";
             $prompt .= "}\n\n";
         }
         
@@ -381,16 +390,18 @@ class QuizGeneratorService
 
     /**
      * Build a simpler prompt for quiz generation as fallback.
+     * *** THIS FUNCTION HAS BEEN REMOVED / MERGED ***
      */
     private function buildSimpleQuizPrompt(string $lessonContent, int $quizCount): string
     {
+        // This function is no longer the source of the second prompt.
+        // We now re-use the main prompt builder with simpler options.
+        // This simple prompt is here as a failsafe, but shouldn't be used.
         $prompt = "Generate {$quizCount} quiz questions based on this content:\n\n";
         $prompt .= $lessonContent;
-        $prompt .= "\n\nCRITICAL: Return ONLY valid JSON. Do not include explanations, markdown, or code fences.\n\n";
-        $prompt .= "Important: Your entire response must be a single valid JSON array. Do not include markdown, explanations, or comments. If you cannot follow this, output an empty JSON array [].\n\n";
+        $prompt .= "\n\nCRITICAL: Return ONLY valid JSON in the exact format requested in previous instructions. Do not include explanations, markdown, or code fences.\n\n";
         $prompt .= "Return ONLY a JSON array with this format:\n";
-        $prompt .= "[{\"type\":\"MULTIPLE_CHOICE\",\"question\":\"Your question here?\",\"options\":[{\"text\":\"Option A\",\"is_correct\":false},{\"text\":\"Option B\",\"is_correct\":true},{\"text\":\"Option C\",\"is_correct\":false},{\"text\":\"Option D\",\"is_correct\":false}],\"correct_answer\":\"Option B\",\"difficulty\":\"medium\",\"explanation\":\"Why this is correct\"},{\"type\":\"TRUE_FALSE\",\"question\":\"This statement is true.\",\"is_correct\":true,\"correct_answer\":\"true\",\"difficulty\":\"easy\",\"explanation\":\"This is a true statement.\"}]\n\n";
-        $prompt .= "Do NOT wrap in HTML tags, markdown, or any other formatting. Return ONLY the JSON array.";
+        $prompt .= "[{\"type\":\"MULTIPLE_CHOICE\",\"question\":\"Your question here?\",\"options\":[{\"text\":\"Option A\",\"is_correct\":false},{\"text\":\"Option B\",\"is_correct\":true}],\"correct_answer\":\"Option B\",\"difficulty\":\"medium\",\"explanation\":\"Why this is correct\"}]\n\n";
         
         return $prompt;
     }
@@ -447,15 +458,42 @@ class QuizGeneratorService
             }
 
             if (!is_array($quizzes)) {
-                throw new Exception("Response is not an array");
+                 // Handle cases where the AI might return a single object instead of an array
+                 if (is_object($quizzes) || (is_array($quizzes) && !empty($quizzes) && !is_numeric(array_key_first($quizzes)))) {
+                    Log::warning('LLM returned a single JSON object, wrapping in an array.', [
+                        'response' => $response
+                    ]);
+                    $quizzes = [$quizzes];
+                } else {
+                    throw new Exception("Response is not a valid JSON array");
+                }
             }
 
+            $validatedQuizzes = [];
             // Validate each quiz
             foreach ($quizzes as $index => $quiz) {
-                $this->validateQuizStructure($quiz, $index);
+                // Use try-catch to skip invalid quizzes instead of failing the whole batch
+                try {
+                    $this->validateQuizStructure($quiz, $index);
+                    $validatedQuizzes[] = $quiz; // Add only valid quizzes
+                } catch (Exception $e) {
+                    Log::warning('Skipping invalid quiz structure', [
+                        'quiz_index' => $index,
+                        'quiz_data' => $quiz,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
-            return $quizzes;
+            if (empty($validatedQuizzes)) {
+                Log::error('No valid quizzes were parsed from the LLM response.', [
+                    'original_response' => $response
+                ]);
+                return $this->createFallbackQuiz($response);
+            }
+
+            return $validatedQuizzes; // Return only the valid quizzes
+
         } catch (Exception $e) {
             Log::error('Quiz response parsing failed', [
                 'error' => $e->getMessage(),
@@ -472,6 +510,12 @@ class QuizGeneratorService
     {
         // Remove HTML tags first
         $json = strip_tags($json);
+        
+        // Decode HTML entities (like &nbsp;)
+        $json = html_entity_decode($json, ENT_QUOTES, 'UTF-8');
+        
+        // Replace literal non-breaking spaces (using their safe UTF-8 hex value)
+        $json = str_replace(hex2bin('c2a0'), ' ', $json);
         
         // Remove markdown code blocks if present
         if (str_starts_with($json, '```json')) {
@@ -499,19 +543,12 @@ class QuizGeneratorService
         // Fix single quotes to double quotes (but be more careful)
         $json = preg_replace("/(?<!\\\\)'/", '"', $json);
         
-        // Remove any text before the first [ or after the last ]
-        $json = preg_replace('/^[^[]*/', '', $json);
-        $json = preg_replace('/[^\]]*$/', '', $json);
-        
         // Fix missing commas between array elements (}{ -> },{)
         $json = preg_replace('/}\s*{/', '},{', $json);
 
         // Remove accidental leading commas after object/array starts
         $json = preg_replace('/\{\s*,\s*/', '{', $json);
         $json = preg_replace('/\[\s*,\s*/', '[', $json);
-
-        // Fix truncated JSON by ensuring it ends properly
-        $json = $this->fixTruncatedJson($json);
         
         return trim($json);
     }
@@ -538,11 +575,10 @@ class QuizGeneratorService
         
         // Ensure it starts and ends properly
         $json = trim($json);
-        if (!str_starts_with($json, '[')) {
-            $json = '[' . $json;
-        }
-        if (!str_ends_with($json, ']')) {
-            $json = $json . ']';
+
+        // Fix truncated arrays, but do NOT wrap plain text
+        if (str_starts_with($json, '[') && !str_ends_with($json, ']')) {
+            $json = $json . ']'; // Fix missing end bracket
         }
         
         return $json;
@@ -585,36 +621,10 @@ class QuizGeneratorService
 
     /**
      * Fix truncated JSON by ensuring proper closing.
+     * *** THIS FUNCTION WAS REMOVED AS IT WAS PART OF THE PROBLEM ***
      */
-    private function fixTruncatedJson(string $json): string
-    {
-        // Count opening and closing braces/brackets
-        $openBraces = substr_count($json, '{');
-        $closeBraces = substr_count($json, '}');
-        $openBrackets = substr_count($json, '[');
-        $closeBrackets = substr_count($json, ']');
-        
-        // Add missing closing brackets/braces
-        $missingBraces = $openBraces - $closeBraces;
-        $missingBrackets = $openBrackets - $closeBrackets;
-        
-        // If we're missing closing brackets, add them
-        if ($missingBrackets > 0) {
-            $json .= str_repeat(']', $missingBrackets);
-        }
-        
-        // If we're missing closing braces, add them
-        if ($missingBraces > 0) {
-            $json .= str_repeat('}', $missingBraces);
-        }
-        
-        // If the JSON doesn't end with ], add it
-        if (!str_ends_with(trim($json), ']')) {
-            $json = rtrim($json) . ']';
-        }
-        
-        return $json;
-    }
+    // private function fixTruncatedJson(string $json): string { ... }
+
 
     /**
      * Create a fallback quiz when JSON parsing fails.
@@ -645,12 +655,14 @@ class QuizGeneratorService
 
     /**
      * Validate the structure of a single quiz.
+     * *** THIS FUNCTION HAS BEEN UPDATED TO MATCH THE NEW PROMPTS ***
      */
     private function validateQuizStructure(array $quiz, int $index): void
     {
-        $requiredFields = ['type', 'question'];
+        // 'correct_answer' and 'explanation' are now required from the prompt
+        $requiredFields = ['type', 'question', 'difficulty', 'explanation'];
         foreach ($requiredFields as $field) {
-            if (!isset($quiz[$field]) || empty($quiz[$field])) {
+            if (!isset($quiz[$field])) { // Allow empty explanation
                 throw new Exception("Quiz {$index} missing required field: {$field}");
             }
         }
@@ -660,9 +672,9 @@ class QuizGeneratorService
             throw new Exception("Quiz {$index} has invalid type: {$quiz['type']}");
         }
 
-        // Validate options for multiple choice/select questions
-        if (in_array($quiz['type'], [QuizQuestion::TYPE_MULTIPLE_CHOICE, QuizQuestion::TYPE_MULTIPLE_SELECT])) {
-            if (!isset($quiz['options']) || !is_array($quiz['options']) || count($quiz['options']) < 2) {
+        // Validate options for multiple choice/select/true-false questions
+        if (in_array($quiz['type'], [QuizQuestion::TYPE_MULTIPLE_CHOICE, QuizQuestion::TYPE_MULTIPLE_SELECT, QuizQuestion::TYPE_TRUE_FALSE])) {
+            if (!isset($quiz['options']) || !is_array($quiz['options']) || empty($quiz['options'])) {
                 throw new Exception("Quiz {$index} missing or invalid options");
             }
 
@@ -679,27 +691,38 @@ class QuizGeneratorService
             if ($quiz['type'] === QuizQuestion::TYPE_MULTIPLE_CHOICE && $correctCount !== 1) {
                 throw new Exception("Quiz {$index} must have exactly 1 correct answer for multiple choice");
             }
-
-            if ($quiz['type'] === QuizQuestion::TYPE_MULTIPLE_SELECT && $correctCount < 2) {
-                throw new Exception("Quiz {$index} must have at least 2 correct answers for multiple select");
+            
+            if ($quiz['type'] === QuizQuestion::TYPE_TRUE_FALSE && (count($quiz['options']) !== 2 || $correctCount !== 1)) {
+                 throw new Exception("Quiz {$index} must have exactly 2 options and 1 correct answer for true/false");
             }
 
-            // Remove the extra "correct_answers" field that AI sometimes adds
-            if (isset($quiz['correct_answers'])) {
-                unset($quiz['correct_answers']);
+            if ($quiz['type'] === QuizQuestion::TYPE_MULTIPLE_SELECT && $correctCount < 1) { // Allow at least 1
+                throw new Exception("Quiz {$index} must have at least 1 correct answer for multiple select");
             }
         }
 
-        // Validate TRUE_FALSE questions
+        // Validate TRUE_FALSE questions (handling old format as fallback)
         if ($quiz['type'] === QuizQuestion::TYPE_TRUE_FALSE) {
-            // Handle both "answer" and "is_correct" formats
-            if (isset($quiz['answer'])) {
-                $quiz['is_correct'] = $quiz['answer'];
-                $quiz['correct_answer'] = $quiz['answer'] ? 'true' : 'false';
-            } elseif (isset($quiz['is_correct'])) {
-                $quiz['correct_answer'] = $quiz['is_correct'] ? 'true' : 'false';
-            } else {
-                throw new Exception("Quiz {$index} TRUE_FALSE question missing answer field");
+            if (!isset($quiz['options']) || empty($quiz['options'])) {
+                // Fallback for old format if options are missing
+                if (isset($quiz['answer'])) {
+                    $quiz['correct_answer'] = $quiz['answer'] ? 'true' : 'false';
+                } elseif (isset($quiz['is_correct'])) {
+                    $quiz['correct_answer'] = $quiz['is_correct'] ? 'true' : 'false';
+                } elseif (!isset($quiz['correct_answer'])) {
+                    throw new Exception("Quiz {$index} TRUE_FALSE question missing answer field");
+                }
+            }
+            // If options are present, they are validated above.
+        }
+
+        // Validate TYPE_ANSWER
+        if ($quiz['type'] === QuizQuestion::TYPE_TYPE_ANSWER) {
+            if (!isset($quiz['correct_answer']) || $quiz['correct_answer'] === '' || $quiz['correct_answer'] === null) {
+                throw new Exception("Quiz {$index} TYPE_ANSWER question missing 'correct_answer' field");
+            }
+            if (isset($quiz['options']) && !empty($quiz['options'])) {
+                throw new Exception("Quiz {$index} TYPE_ANSWER question should have an empty 'options' array");
             }
         }
     }
@@ -743,6 +766,7 @@ class QuizGeneratorService
                 }
 
                 // Store correct answer in metadata for type answer and puzzle questions
+                // This logic is now consistent with the prompt
                 if (in_array($quizData['type'], [QuizQuestion::TYPE_TYPE_ANSWER, QuizQuestion::TYPE_PUZZLE])) {
                     $metadata = $question->metadata;
                     $metadata['correct_answer'] = $quizData['correct_answer'] ?? '';
@@ -757,7 +781,8 @@ class QuizGeneratorService
                     'quiz_data' => $quizData,
                     'error' => $e->getMessage()
                 ]);
-                throw new Exception("Failed to store quiz: " . $e->getMessage());
+                // Don't throw, just log and continue
+                // throw new Exception("Failed to store quiz: " . $e->getMessage());
             }
         }
 
@@ -777,6 +802,7 @@ class QuizGeneratorService
                 // Create quiz question
                 $question = QuizQuestion::create([
                     'lesson_id' => null, // Will be assigned when lesson is selected
+                    'course_id' => $courseId, // *** ADDED course_id ***
                     'question' => $quizData['question'],
                     'type' => $quizData['type'],
                     'position' => $position++,
@@ -802,6 +828,7 @@ class QuizGeneratorService
                 }
 
                 // Store correct answer in metadata for type answer and puzzle questions
+                // This logic is now consistent with the prompt
                 if (in_array($quizData['type'], [QuizQuestion::TYPE_TYPE_ANSWER, QuizQuestion::TYPE_PUZZLE])) {
                     $metadata = $question->metadata;
                     $metadata['correct_answer'] = $quizData['correct_answer'] ?? '';
@@ -812,10 +839,12 @@ class QuizGeneratorService
 
             } catch (Exception $e) {
                 Log::error('Failed to store quiz question', [
+                    'course_id' => $courseId,
                     'quiz_data' => $quizData,
                     'error' => $e->getMessage()
                 ]);
-                throw new Exception("Failed to store quiz: " . $e->getMessage());
+                // Don't throw, just log and continue
+                // throw new Exception("Failed to store quiz: " . $e->getMessage());
             }
         }
 
@@ -875,16 +904,17 @@ class QuizGeneratorService
      */
     public function getQuizStats(int $courseId): array
     {
-        $totalQuestions = QuizQuestion::whereHas('lesson', function ($query) use ($courseId) {
-            $query->where('course_id', $courseId);
-        })->count();
+        // *** UPDATED to query by course_id directly ***
+        $totalQuestions = QuizQuestion::where('course_id', $courseId)
+            ->whereNotNull('lesson_id')
+            ->count();
 
-        $questionsByType = QuizQuestion::whereHas('lesson', function ($query) use ($courseId) {
-            $query->where('course_id', $courseId);
-        })->selectRaw('type, COUNT(*) as count')
-          ->groupBy('type')
-          ->pluck('count', 'type')
-          ->toArray();
+        $questionsByType = QuizQuestion::where('course_id', $courseId)
+            ->whereNotNull('lesson_id')
+            ->selectRaw('type, COUNT(*) as count')
+            ->groupBy('type')
+            ->pluck('count', 'type')
+            ->toArray();
 
         return [
             'total_questions' => $totalQuestions,

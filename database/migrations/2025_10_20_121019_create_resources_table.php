@@ -10,19 +10,18 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('resources', function (Blueprint $table) {
-            // This is the correct definition to match your Model
-            $table->uuid('id')->primary(); 
-            
-            $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
-            $table->string('title');
-            $table->text('content');
-            $table->text('embedding')->nullable();
-            $table->text('metadata')->nullable();
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('resources', function (Blueprint $table) {
+        $table->uuid('id')->primary(); // <--- Make sure it says uuid()
+        
+        $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
+        $table->string('title');
+        $table->text('content');
+        $table->text('embedding')->nullable();
+        $table->text('metadata')->nullable();
+        $table->timestamps();
+    });
+}
 
     /**
      * Reverse the migrations.
