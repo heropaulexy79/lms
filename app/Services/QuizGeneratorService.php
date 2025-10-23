@@ -176,17 +176,40 @@ class QuizGeneratorService
     /**
      * Fetch all lessons for a course.
      */
+    // private function fetchCourseLessons(int $courseId)
+    // {
+    //     // First try to get published lessons
+    //     $lessons = Lesson::where('course_id', $courseId)
+    //         ->where('is_published', true)
+    //         ->orderBy('position')
+    //         ->get();
+            
+    //     // If no published lessons, get all lessons (including drafts)
+    //     if ($lessons->isEmpty()) {
+    //         $lessons = Lesson::where('course_id', $courseId)
+    //             ->orderBy('position')
+    //             ->get();
+    //     }
+        
+    //     return $lessons;
+    // }
+
+    /**
+     * Fetch all lessons for a course.
+     */
     private function fetchCourseLessons(int $courseId)
     {
-        // First try to get published lessons
+        // First try to get published lessons, EXCLUDING quizzes
         $lessons = Lesson::where('course_id', $courseId)
             ->where('is_published', true)
+            ->where('type', '!=', 'QUIZ') // <-- FIX: Exclude quiz lessons
             ->orderBy('position')
             ->get();
             
-        // If no published lessons, get all lessons (including drafts)
+        // If no published content lessons, get all lessons (including drafts), EXCLUDING quizzes
         if ($lessons->isEmpty()) {
             $lessons = Lesson::where('course_id', $courseId)
+                ->where('type', '!=', 'QUIZ') // <-- FIX: Exclude quiz lessons
                 ->orderBy('position')
                 ->get();
         }
