@@ -220,13 +220,37 @@ class QuizGeneratorService
     /**
      * Prepare lesson content for LLM processing.
      */
+    // private function prepareLessonContent($lessons): string
+    // {
+    //     $content = "Course Lessons Content:\n\n";
+        
+    //     foreach ($lessons as $index => $lesson) {
+    //         $content .= "=== Lesson " . ($index + 1) . ": {$lesson->title} ===\n";
+    //         $content .= "Content: " . strip_tags($lesson->content ?? '') . "\n\n";
+    //     }
+
+    //     return $content;
+    // }
+    /**
+     * Prepare lesson content for LLM processing.
+     */
     private function prepareLessonContent($lessons): string
     {
-        $content = "Course Lessons Content:\n\n";
+        $content = ""; // Start with an empty string
+        $lessonContentFound = false;
         
         foreach ($lessons as $index => $lesson) {
-            $content .= "=== Lesson " . ($index + 1) . ": {$lesson->title} ===\n";
-            $content .= "Content: " . strip_tags($lesson->content ?? '') . "\n\n";
+            $lessonText = strip_tags($lesson->content ?? '');
+            if (!empty(trim($lessonText))) {
+                // Only add the main header once
+                if (!$lessonContentFound) {
+                    $content .= "Course Lessons Content:\n\n";
+                    $lessonContentFound = true;
+                }
+                
+                $content .= "=== Lesson " . ($index + 1) . ": {$lesson->title} ===\n";
+                $content .= "Content: " . $lessonText . "\n\n";
+            }
         }
 
         return $content;
@@ -235,11 +259,29 @@ class QuizGeneratorService
     /**
      * Prepare course content for LLM processing when no lessons exist.
      */
+    // private function prepareCourseContent(Course $course): string
+    // {
+    //     $content = "Course Information:\n\n";
+    //     $content .= "=== Course: {$course->title} ===\n";
+    //     $content .= "Description: " . strip_tags($course->description ?? '') . "\n\n";
+        
+    //     return $content;
+    // }
+
+    /**
+     * Prepare course content for LLM processing when no lessons exist.
+     */
     private function prepareCourseContent(Course $course): string
     {
-        $content = "Course Information:\n\n";
-        $content .= "=== Course: {$course->title} ===\n";
-        $content .= "Description: " . strip_tags($course->description ?? '') . "\n\n";
+        $content = ""; // Start with an empty string
+        $descriptionText = strip_tags($course->description ?? '');
+
+        // Only add content if the description actually exists
+        if (!empty(trim($descriptionText))) {
+            $content = "Course Information:\n\n";
+            $content .= "=== Course: {$course->title} ===\n";
+            $content .= "Description: " . $descriptionText . "\n\n";
+        }
         
         return $content;
     }
