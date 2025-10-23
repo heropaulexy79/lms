@@ -28,10 +28,15 @@ const form = useForm({
     slug: props.lesson.slug,
     content: props.lesson.content,
     quiz:
-        props.lesson.content_json &&
-        typeof props.lesson.content_json !== "string"
-            ? // TODO: PARSE WITH ZOD before hand
-              props.lesson.content_json
+        // *** START FIX ***
+        // 1. Check for AI-generated questions first (props.lesson.questions)
+        props.lesson.questions && props.lesson.questions.length > 0
+            ? props.lesson.questions
+        // 2. Fallback to old manual quiz builder content (props.lesson.content_json)
+        : props.lesson.content_json &&
+          typeof props.lesson.content_json !== "string"
+            ? props.lesson.content_json
+        // 3. Fallback to a single empty question (This is what you were seeing)
             : [
                   {
                       id: generateId(),
@@ -43,6 +48,7 @@ const form = useForm({
                       ],
                   },
               ],
+        // *** END FIX ***
     type: props.lesson.type ?? "DEFAULT",
     is_published: props.lesson.is_published
         ? props.lesson.is_published + ""
@@ -146,7 +152,6 @@ function dismissGeneratedContent() {
         <div
             class="relative grid gap-6 md:grid-cols-[1fr_200px] md:gap-10 lg:grid-cols-[1fr_250px]"
         >
-            <!-- Left -->
             <div
                 class="grid gap-6 rounded-md bg-background px-4 py-4 md:grid-cols-2"
             >
@@ -199,7 +204,6 @@ function dismissGeneratedContent() {
                     </div>
                     <InputError class="mt-2" :message="form.errors.content" />
                     
-                    <!-- AI Content Generation -->
                     <div v-if="form.type === 'DEFAULT'" class="mt-4">
                         <div class="flex items-center gap-2">
                             <Button
@@ -227,7 +231,6 @@ function dismissGeneratedContent() {
                             </Button>
                         </div>
                         
-                        <!-- Generated Content Preview -->
                         <div v-if="showGeneratedContent" class="mt-4 p-4 border rounded-lg bg-muted/50">
                             <div class="flex items-center justify-between mb-2">
                                 <h4 class="text-sm font-medium">Generated Content Preview</h4>
@@ -261,7 +264,6 @@ function dismissGeneratedContent() {
                 </div>
             </div>
 
-            <!-- Right -->
             <aside class="sticky top-4 space-y-6 self-start rounded-md px-4">
                 <Button
                     type="submit"

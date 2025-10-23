@@ -16,10 +16,11 @@ class QuizQuestion extends Model
      */
     protected $fillable = [
         'lesson_id',
-        'question',
+        'question', // <--- Database column
         'type',
         'position',
         'metadata',
+        'course_id', // Make sure this is in your fillable array from the migration
     ];
 
     /**
@@ -29,6 +30,24 @@ class QuizQuestion extends Model
         'metadata' => 'array',
         'position' => 'integer',
     ];
+
+    // *** START FIX FOR EMPTY QUESTIONS ***
+    /**
+     * Appends the 'text' attribute to array/JSON versions of the model.
+     * This makes the frontend see a 'text' property.
+     */
+    protected $appends = ['text'];
+
+    /**
+     * Accessor to map the 'question' column to a 'text' attribute.
+     * This is what the frontend QuizBuilder.vue expects.
+     */
+    public function getTextAttribute()
+    {
+        return $this->question; // <--- Maps 'question' to 'text'
+    }
+    // *** END FIX FOR EMPTY QUESTIONS ***
+
 
     /**
      * Question types enum values.
@@ -59,6 +78,14 @@ class QuizQuestion extends Model
     public function lesson(): BelongsTo
     {
         return $this->belongsTo(Lesson::class);
+    }
+    
+    /**
+     * Get the course that owns the quiz question.
+     */
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(Course::class);
     }
 
     /**
@@ -155,6 +182,11 @@ class QuizQuestion extends Model
         }
 
         // Multiple choice or true/false
+        // Check if $correctAnswer is not empty before accessing index 0
+        if (empty($correctAnswer)) {
+            return false;
+        }
+        
         return is_array($answer) && count($answer) === 1 && $answer[0] == $correctAnswer[0];
     }
 

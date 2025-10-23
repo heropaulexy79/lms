@@ -5,69 +5,62 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
+// *** ADD THIS ***
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\QuizQuestion;
+// *** END ADDITION ***
 
 class Lesson extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'course_id', 'slug', 'type', 'content', 'content_json', 'is_published'];
+    const TYPE_DEFAULT = 'DEFAULT';
+    const TYPE_QUIZ = 'QUIZ';
 
-    protected $casts = [
-        'content_json' => 'json',
-        'is_published' => 'boolean',
+    protected $fillable = [
+        'title', 'slug', 'content', 'course_id', 'position', 'is_published', 'type', 'content_json'
     ];
 
-    public function scopePublished($query)
-    {
-        return $query->where('is_published', true);
-    }
+    protected $casts = [
+        'is_published' => 'boolean',
+        'content_json' => 'array',
+    ];
 
     public function course()
     {
-        return $this->belongsTo(Course::class);
+        return $this->belongsTo(Course::class, 'course_id');
     }
 
-    public function user_lesson()
-    {
-        return $this->hasMany(UserLesson::class);
-    }
-
+    // *** ADD THIS FUNCTION ***
     /**
-     * Get the quiz questions for this lesson.
+     * Get the quiz questions for the lesson.
      */
-    public function quizQuestions()
+    public function questions(): HasMany
     {
-        return $this->hasMany(QuizQuestion::class)->orderBy('position');
+        // This creates the $lesson->questions relationship
+        return $this->hasMany(QuizQuestion::class, 'lesson_id', 'id')->orderBy('position');
     }
-
-    /**
-     * Get the quiz attempts for this lesson.
-     */
-    public function quizAttempts()
-    {
-        return $this->hasMany(QuizAttempt::class);
-    }
-
+    // *** END ADDITION ***
+    
     public function quizWithoutCorrectAnswer()
     {
-        $filtered = [];
+        $quiz = $this->content_json;
 
-        foreach ($this->content_json as $quiz) {
-            $filtered[] = Arr::except($quiz, ['correct_option']);
+        if (is_null($quiz)) {
+            return [];
         }
 
-        return $filtered;
+        return array_map(function ($question) {
+            if (isset($question['correct_option'])) {
+                unset($question['correct_option']);
+            }
+            if (isset($question['options'])) {
+                $question['options'] = array_map(function ($option) {
+                    unset($option['is_correct']);
+                    return $option;
+                }, $question['options']);
+            }
+            return $question;
+        }, $quiz);
     }
-
-    /**
-     * Check if this lesson has AI-generated quiz questions
-     */
-    public function hasAiGeneratedQuestions()
-    {
-        return $this->quizQuestions()->exists();
-    }
-
-    const TYPE_DEFAULT = 'DEFAULT';
-
-    const TYPE_QUIZ = 'QUIZ';
 }

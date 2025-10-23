@@ -9,6 +9,7 @@ use App\Models\QuizOption;
 use App\Models\Resource;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\RequestException;
 use Exception;
 
 class QuizGeneratorService
@@ -506,50 +507,58 @@ class QuizGeneratorService
     /**
      * Fix common JSON issues in LLM responses.
      */
+    /**
+     * Fix common JSON issues in LLM responses.
+     */
     private function fixCommonJsonIssues(string $json): string
     {
         // Remove HTML tags first
         $json = strip_tags($json);
         
-        // Decode HTML entities (like &nbsp;)
-        $json = html_entity_decode($json, ENT_QUOTES, 'UTF-8');
-        
-        // Replace literal non-breaking spaces (using their safe UTF-8 hex value)
-        $json = str_replace(hex2bin('c2a0'), ' ', $json);
-        
         // Remove markdown code blocks if present
-        if (str_starts_with($json, '```json')) {
-            $json = substr($json, 7);
-        }
-        if (str_starts_with($json, '```')) {
-            $json = substr($json, 3);
-        }
-        if (str_ends_with($json, '```')) {
-            $json = substr($json, 0, -3);
-        }
+        // Handle ```json at the start
+        $json = preg_replace('/^```json\s*/', '', $json);
+        // Handle ``` at the start
+        $json = preg_replace('/^```\s*/', '', $json);
+        // Handle ``` at the end
+        $json = preg_replace_callback('/```$/', function($matches) {
+            return '';
+        }, $json);
+        
         $json = trim($json);
-        
-        // Try to extract JSON array from the response - use greedy match to get the full array
-        if (preg_match('/\[[\s\S]*\]/', $json, $matches)) {
-            $json = $matches[0];
+
+        // Find the first '[' and the last ']'
+        $firstBracket = strpos($json, '[');
+        $lastBracket = strrpos($json, ']');
+
+        if ($firstBracket === false || $lastBracket === false || $lastBracket < $firstBracket) {
+            // No valid array structure found, let it fail
+            Log::warning('JSON cleaning failed: Could not find valid [ and ] structure.', ['json_preview' => substr($json, 0, 200)]);
+            return $json; 
         }
+
+        // Extract the content between the first [ and last ]
+        $json = substr($json, $firstBracket, $lastBracket - $firstBracket + 1);
         
-        // Fix trailing commas
+        // Fix trailing commas before closing braces/brackets
         $json = preg_replace('/,(\s*[}\]])/', '$1', $json);
         
-        // Fix double-escaped quotes (\"\" -> \")
+        // Fix double-escaped quotes
         $json = preg_replace('/\\\\"/', '"', $json);
         
-        // Fix single quotes to double quotes (but be more careful)
-        $json = preg_replace("/(?<!\\\\)'/", '"', $json);
-        
-        // Fix missing commas between array elements (}{ -> },{)
+        // Fix missing commas between objects
         $json = preg_replace('/}\s*{/', '},{', $json);
 
-        // Remove accidental leading commas after object/array starts
-        $json = preg_replace('/\{\s*,\s*/', '{', $json);
+        // Remove accidental leading commas
         $json = preg_replace('/\[\s*,\s*/', '[', $json);
+        $json = preg_replace('/\{\s*,\s*/', '{', $json);
+
+        // Remove non-printable characters
+        $json = preg_replace('/[\x00-\x1F\x7F]/', '', $json);
         
+        // Remove BOM
+        $json = str_replace("\xEF\BB\xBF", '', $json);
+
         return trim($json);
     }
 

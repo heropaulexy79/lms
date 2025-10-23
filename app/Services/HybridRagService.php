@@ -325,19 +325,23 @@ class HybridRagService
         return $context;
     }
 
-    /**
+   /**
      * Generate content using Gemini AI
      */
     private function generateWithGemini(string $title, string $context, array $options = [], bool $jsonMode = false): string
     {
         try {
-            $prompt = $this->buildPrompt($title, $context, $options);
+            // *** START FIX ***
+            // If in JSON mode, the $context *is* the prompt.
+            // If not in JSON mode, build the HTML prompt.
+            $finalPrompt = $jsonMode ? $context : $this->buildPrompt($title, $context, $options);
+            // *** END FIX ***
             
             $requestData = [
                 'contents' => [
                     [
                         'parts' => [
-                            ['text' => $prompt]
+                            ['text' => $finalPrompt] // Use the correct prompt
                         ]
                     ]
                 ],
@@ -354,7 +358,8 @@ class HybridRagService
                 $requestData['generationConfig']['responseMimeType'] = 'application/json';
             }
 
-            $response = Http::withHeaders([
+            // Keep the 120s timeout
+            $response = Http::timeout(120)->withHeaders([ 
                 'Content-Type' => 'application/json',
             ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->geminiModel}:generateContent?key={$this->geminiApiKey}", $requestData);
 
@@ -362,6 +367,11 @@ class HybridRagService
                 $data = $response->json();
                 $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
                 
+                // Only format content if it's NOT JSON mode
+                if ($jsonMode) {
+                    return $content; // Return the raw JSON string
+                }
+
                 // Clean up and format the HTML content
                 return $this->formatHtmlContent($content);
             }

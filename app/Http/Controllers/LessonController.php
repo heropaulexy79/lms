@@ -109,10 +109,17 @@ class LessonController extends Controller
         // $lesson->content_json = Arr::except($lesson->content_json, ['correct_option']);
         // $lesson->content_json = $lesson->quizWithoutCorrectAnswer();
 
+        // *** THIS IS THE FIX ***
+        // Load AI questions if it's a QUIZ lesson
+        if ($lesson->type === Lesson::TYPE_QUIZ) {
+            $lesson->load('questions.options');
+        }
+        // *** END FIX ***
+
         return Inertia::render('Organisation/Course/Lesson/Edit', [
             // 'organisation' => $user->organisation,
             'course' => $course,
-            'lesson' => $lesson,
+            'lesson' => $lesson, // This now includes the 'questions' array
         ]);
     }
 
