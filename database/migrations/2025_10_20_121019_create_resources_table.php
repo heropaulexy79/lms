@@ -20,7 +20,7 @@ return new class extends Migration
             // *** END FIX ***
 
             // Add the other columns from your model
-            $table->foreignId('course_id')->constrained()->onDelete('cascade');
+            $table->foreignId('course_id')->index();
             $table->string('title');
             $table->text('content');
             $table->json('embedding')->nullable();
