@@ -20,28 +20,52 @@ class ClassroomController extends Controller
 
     public function showLessons(Request $request, Course $course)
     {
-
         $user = $request->user();
 
-        $lastCompletedLesson = UserLesson::where('user_id', $user->id)
-            ->where('completed', 1)
+        // --- FIX START: Original logic was flawed ---
+        
+        // 1. Find the position of the last completed lesson
+        $lastCompletedLessonPosition = UserLesson::where('user_id', $user->id)
             ->join('lessons', 'user_lessons.lesson_id', '=', 'lessons.id')
-            ->select('user_lessons.*', 'lessons.course_id', 'lessons.is_published', 'lessons.position')
+            ->where('user_lessons.completed', 1)
             ->where('lessons.is_published', 1)
             ->where('lessons.course_id', $course->id)
             ->orderBy('lessons.position', 'desc')
-            ->first();
+            ->value('lessons.position'); // Get just the position
 
+        $redirectLesson = null;
 
-        $redirectLesson = $lastCompletedLesson->id ?? $course->lessons()->first(); // Redirect to 1st if none completed
+        if ($lastCompletedLessonPosition) {
+            // 2. User has completed at least one lesson. Find the *next* one.
+            $redirectLesson = $course->publishedLessons() // Use fixed relationship
+                ->where('position', '>', $lastCompletedLessonPosition)
+                ->orderBy('position')
+                ->first();
+        }
 
-        return redirect(route('classroom.lesson.show', ['course' => $course->slug, 'lesson' => $redirectLesson->slug]));
+        if (!$redirectLesson) {
+            // 3. If no last completed lesson OR no next lesson, get the very first lesson.
+            $redirectLesson = $course->publishedLessons() // Use fixed relationship
+                ->orderBy('position')
+                ->first();
+        }
+
+        // 4. If there are no published lessons at all, redirect back to course page.
+        if (!$redirectLesson) {
+            return redirect(route('course.show', $course))->with('error', 'This course has no published lessons.');
+        }
+        
+        // 5. Redirect to the correct lesson
+        return redirect(route('classroom.lesson.show', [
+            'course' => $course->slug,
+            'lesson' => $redirectLesson->slug
+        ]));
+        // --- FIX END ---
     }
 
 
     public function showLesson(Request $request, Course $course, Lesson $lesson)
     {
-
         $user = $request->user();
 
         $temp_content_json = $lesson->content_json;
@@ -58,11 +82,14 @@ class ClassroomController extends Controller
             }
         }
 
-        $lessons = $course->lessons()->published()->orderBy('position')
+        // --- FIX: Use publishedLessons() relationship ---
+        $lessons = $course->publishedLessons()->orderBy('position')
+        // $lessons = $course->lessons()->published()->orderBy('position') // <-- Original code
             ->with(['user_lesson' => function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             }])
             ->get(['title', 'position', 'type', 'id', 'slug',]);
+        
         $total_completed = 0;
 
         // foreach ($lessons as $l) {
@@ -124,13 +151,16 @@ class ClassroomController extends Controller
 
     public function showCompleted(Request $request, Course $course)
     {
-
         $user = $request->user();
-        $lessons = $course->lessons()->published()->orderBy('position')
+        
+        // --- FIX: Use publishedLessons() relationship ---
+        $lessons = $course->publishedLessons()->orderBy('position')
+        // $lessons = $course->lessons()->published()->orderBy('position') // <-- Original code
             ->with(['user_lesson' => function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             }])
             ->get(['title', 'position', 'type', 'id', 'slug',]);
+        
         $total_completed = 0;
 
         foreach ($lessons as $l) {
@@ -144,7 +174,6 @@ class ClassroomController extends Controller
             ->where('course_id', $course->id)
             ->first();
         if ($total_completed === count($lessons)) {
-
             if ($enrollment) {
                 $enrollment->is_completed = true;
                 $enrollment->save();
@@ -168,9 +197,6 @@ class ClassroomController extends Controller
             ->select('user_lessons.score') // Select specific columns
             ->get();
 
-
-
-
         return Inertia::render('Classroom/Completed', [
             'course' => $course,
             'lessons' => $lessons,
@@ -185,7 +211,6 @@ class ClassroomController extends Controller
 
     public function markLessonComplete(Request $request, Course $course, Lesson $lesson)
     {
-
         $user = $request->user();
 
         // $user_lesson = UserLesson::where('user_id', $user->id)
@@ -372,3 +397,4 @@ class ClassroomController extends Controller
         }
     }
 }
+
