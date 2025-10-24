@@ -63,7 +63,8 @@ class QuizController extends Controller
             $lesson = Lesson::create([
                 'course_id' => $request->course_id,
                 'title' => $request->quiz_title,
-                'slug' => \Illuminate\Support\Str::slug($request->quiz_title),
+                // 'slug' => \Illuminate\Support\Str::slug($request->quiz_title),
+                'slug' => \Illuminate\Support\Str::slug($request->quiz_title) . '-' . strtolower(\Illuminate\Support\Str::random(6)),
                 'content' => 'AI-generated quiz lesson',
                 'type' => 'QUIZ',
                 'position' => Lesson::where('course_id', $request->course_id)->max('position') + 1,

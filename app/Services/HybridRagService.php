@@ -328,20 +328,23 @@ class HybridRagService
    /**
      * Generate content using Gemini AI
      */
+    /**
+     * Generate content using Gemini AI
+     */
     private function generateWithGemini(string $title, string $context, array $options = [], bool $jsonMode = false): string
     {
         try {
-            // *** START FIX ***
-            // If in JSON mode, the $context *is* the prompt.
+            
+            // --- FIX 1: Use the prompt from QuizGenerator, don't build a new one ---
+            // If in JSON mode, the $context *is* the real prompt.
             // If not in JSON mode, build the HTML prompt.
             $finalPrompt = $jsonMode ? $context : $this->buildPrompt($title, $context, $options);
-            // *** END FIX ***
             
             $requestData = [
                 'contents' => [
                     [
                         'parts' => [
-                            ['text' => $finalPrompt] // Use the correct prompt
+                            ['text' => $finalPrompt] // Use the correct final prompt
                         ]
                     ]
                 ],
@@ -358,7 +361,7 @@ class HybridRagService
                 $requestData['generationConfig']['responseMimeType'] = 'application/json';
             }
 
-            // Keep the 120s timeout
+            // --- FIX 2: Add 120-second timeout to prevent cURL error 28 ---
             $response = Http::timeout(120)->withHeaders([ 
                 'Content-Type' => 'application/json',
             ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->geminiModel}:generateContent?key={$this->geminiApiKey}", $requestData);
@@ -367,7 +370,7 @@ class HybridRagService
                 $data = $response->json();
                 $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
                 
-                // Only format content if it's NOT JSON mode
+                // --- FIX 3: Do NOT format JSON, return it raw ---
                 if ($jsonMode) {
                     return $content; // Return the raw JSON string
                 }

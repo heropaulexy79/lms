@@ -234,6 +234,9 @@ class QuizGeneratorService
     /**
      * Prepare lesson content for LLM processing.
      */
+    /**
+     * Prepare lesson content for LLM processing.
+     */
     private function prepareLessonContent($lessons): string
     {
         $content = ""; // Start with an empty string
@@ -268,6 +271,9 @@ class QuizGeneratorService
     //     return $content;
     // }
 
+    /**
+     * Prepare course content for LLM processing when no lessons exist.
+     */
     /**
      * Prepare course content for LLM processing when no lessons exist.
      */

@@ -9,19 +9,26 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
+  /**
+     * Run the migrations.
+     */
     public function up(): void
-{
-    Schema::create('resources', function (Blueprint $table) {
-        $table->uuid('id')->primary(); // <--- Make sure it says uuid()
-        
-        $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
-        $table->string('title');
-        $table->text('content');
-        $table->text('embedding')->nullable();
-        $table->text('metadata')->nullable();
-        $table->timestamps();
-    });
-}
+    {
+        Schema::create('resources', function (Blueprint $table) {
+            // *** START FIX: Change from $table->id() to $table->uuid() ***
+            $table->uuid('id')->primary();
+            // *** END FIX ***
+
+            // Add the other columns from your model
+            $table->foreignId('course_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('content');
+            $table->json('embedding')->nullable();
+            $table->json('metadata')->nullable();
+            
+            $table->timestamps();
+        });
+    }
 
     /**
      * Reverse the migrations.
