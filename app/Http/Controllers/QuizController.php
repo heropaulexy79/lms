@@ -60,12 +60,24 @@ class QuizController extends Controller
                 ], 403);
             }
 
+            // *** FIX V2: Ensure slug is unique AND respects 255 char limit ***
+            // 1. Create the base slug from the title
+            $baseSlug = \Illuminate\Support\Str::slug($request->quiz_title);
+            
+            // 2. Limit the base slug to 248 chars to make room for the suffix
+            // 255 (db limit) - 7 (hyphen + 6 random chars) = 248
+            // We use '' as the third param to avoid '...' being added.
+            $limitedSlug = \Illuminate\Support\Str::limit($baseSlug, 248, '');
+
+            // 3. Create the final slug
+            $finalSlug = $limitedSlug . '-' . strtolower(\Illuminate\Support\Str::random(6));
+            // *** END FIX V2 ***
+
             // Create a new quiz lesson first
             $lesson = Lesson::create([
                 'course_id' => $request->course_id,
                 'title' => $request->quiz_title,
-                // 'slug' => \Illuminate\Support\Str::slug($request->quiz_title),
-                'slug' => \Illuminate\Support\Str::slug($request->quiz_title) . '-' . strtolower(\Illuminate\Support\Str::random(6)),
+                'slug' => $finalSlug, // Use the new final slug
                 'content' => 'AI-generated quiz lesson',
                 'type' => 'QUIZ',
                 'position' => Lesson::where('course_id', $request->course_id)->max('position') + 1,
@@ -647,3 +659,4 @@ class QuizController extends Controller
         return false;
     }
 }
+

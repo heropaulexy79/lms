@@ -7,6 +7,8 @@ use App\Models\Lesson;
 use App\Models\QuizQuestion;
 use App\Models\QuizOption;
 use App\Models\Resource;
+// use App\Models\HybridRagService; // <-- This was wrong
+use App\Services\HybridRagService; // <-- This is the correct namespace
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\RequestException;
@@ -56,7 +58,23 @@ class QuizGeneratorService
             
             // 4. Ensure we have some content to work with
             if (empty(trim($lessonContent)) && empty($referenceContent)) {
-                throw new Exception('No content available for quiz generation. Please add lessons or reference resources to the course.');
+                // Log this for clarity
+                Log::warning('No content available for quiz generation. Course or lessons are empty.', [
+                    'course_id' => $courseId,
+                    'lesson_id' => $lessonId,
+                    'lesson_content_empty' => empty(trim($lessonContent)),
+                    'reference_content_empty' => empty($referenceContent),
+                ]);
+                // Return 0 instead of throwing, as the controller expects a result object
+                return [
+                    'success' => true,
+                    'lesson_id' => $lessonId,
+                    'course_id' => $courseId,
+                    'generated_count' => 0,
+                    'quizzes' => [],
+                    'message' => 'No content available for quiz generation. Please add text to your lessons or provide reference resources.'
+                ];
+                // throw new Exception('No content available for quiz generation. Please add lessons or reference resources to the course.');
             }
 
             // 5. Generate quizzes using LLM
@@ -133,7 +151,20 @@ class QuizGeneratorService
             
             // 4. Ensure we have some content to work with
             if (empty(trim($lessonContent)) && empty($referenceContent)) {
-                throw new Exception('No content available for quiz generation. Please add lessons or reference resources to the course.');
+                 Log::warning('No content available for quiz generation. Course or lessons are empty.', [
+                    'course_id' => $courseId,
+                    'lesson_content_empty' => empty(trim($lessonContent)),
+                    'reference_content_empty' => empty($referenceContent),
+                ]);
+                 // Return 0 instead of throwing
+                return [
+                    'success' => true,
+                    'course_id' => $courseId,
+                    'generated_count' => 0,
+                    'quizzes' => [],
+                    'message' => 'No content available for quiz generation. Please add text to your lessons or provide reference resources.'
+                ];
+                // throw new Exception('No content available for quiz generation. Please add lessons or reference resources to the course.');
             }
 
             // 5. Generate quizzes using LLM
@@ -176,27 +207,6 @@ class QuizGeneratorService
     /**
      * Fetch all lessons for a course.
      */
-    // private function fetchCourseLessons(int $courseId)
-    // {
-    //     // First try to get published lessons
-    //     $lessons = Lesson::where('course_id', $courseId)
-    //         ->where('is_published', true)
-    //         ->orderBy('position')
-    //         ->get();
-            
-    //     // If no published lessons, get all lessons (including drafts)
-    //     if ($lessons->isEmpty()) {
-    //         $lessons = Lesson::where('course_id', $courseId)
-    //             ->orderBy('position')
-    //             ->get();
-    //     }
-        
-    //     return $lessons;
-    // }
-
-    /**
-     * Fetch all lessons for a course.
-     */
     private function fetchCourseLessons(int $courseId)
     {
         // First try to get published lessons, EXCLUDING quizzes
@@ -219,23 +229,7 @@ class QuizGeneratorService
 
     /**
      * Prepare lesson content for LLM processing.
-     */
-    // private function prepareLessonContent($lessons): string
-    // {
-    //     $content = "Course Lessons Content:\n\n";
-        
-    //     foreach ($lessons as $index => $lesson) {
-    //         $content .= "=== Lesson " . ($index + 1) . ": {$lesson->title} ===\n";
-    //         $content .= "Content: " . strip_tags($lesson->content ?? '') . "\n\n";
-    //     }
-
-    //     return $content;
-    // }
-    /**
-     * Prepare lesson content for LLM processing.
-     */
-    /**
-     * Prepare lesson content for LLM processing.
+     * *** UPDATED FOR MORE ROBUST TEXT CLEANING ***
      */
     private function prepareLessonContent($lessons): string
     {
@@ -243,8 +237,14 @@ class QuizGeneratorService
         $lessonContentFound = false;
         
         foreach ($lessons as $index => $lesson) {
-            $lessonText = strip_tags($lesson->content ?? '');
-            if (!empty(trim($lessonText))) {
+            // 1. Decode HTML entities (like &nbsp;)
+            $decodedContent = html_entity_decode($lesson->content ?? '');
+            // 2. Strip HTML tags
+            $lessonText = strip_tags($decodedContent);
+            // 3. Trim whitespace AND non-breaking spaces
+            $trimmedText = trim($lessonText, " \t\n\r\0\x0B\xC2\xA0");
+
+            if (!empty($trimmedText)) {
                 // Only add the main header once
                 if (!$lessonContentFound) {
                     $content .= "Course Lessons Content:\n\n";
@@ -252,41 +252,41 @@ class QuizGeneratorService
                 }
                 
                 $content .= "=== Lesson " . ($index + 1) . ": {$lesson->title} ===\n";
-                $content .= "Content: " . $lessonText . "\n\n";
+                $content .= "Content: " . $trimmedText . "\n\n";
+            } else {
+                 Log::debug('Skipping lesson, no text content found after cleaning.', [
+                    'lesson_id' => $lesson->id,
+                    'lesson_title' => $lesson->title,
+                    'original_content' => substr($lesson->content, 0, 100)
+                ]);
             }
         }
 
         return $content;
     }
 
-    /**
-     * Prepare course content for LLM processing when no lessons exist.
-     */
-    // private function prepareCourseContent(Course $course): string
-    // {
-    //     $content = "Course Information:\n\n";
-    //     $content .= "=== Course: {$course->title} ===\n";
-    //     $content .= "Description: " . strip_tags($course->description ?? '') . "\n\n";
-        
-    //     return $content;
-    // }
 
     /**
      * Prepare course content for LLM processing when no lessons exist.
-     */
-    /**
-     * Prepare course content for LLM processing when no lessons exist.
+     * *** UPDATED FOR MORE ROBUST TEXT CLEANING ***
      */
     private function prepareCourseContent(Course $course): string
     {
         $content = ""; // Start with an empty string
-        $descriptionText = strip_tags($course->description ?? '');
+        
+        // 1. Decode HTML entities (like &nbsp;)
+        $decodedDescription = html_entity_decode($course->description ?? '');
+        // 2. Strip HTML tags
+        $descriptionText = strip_tags($decodedDescription);
+        // 3. Trim whitespace AND non-breaking spaces
+        $trimmedText = trim($descriptionText, " \t\n\r\0\x0B\xC2\xA0");
+
 
         // Only add content if the description actually exists
-        if (!empty(trim($descriptionText))) {
+        if (!empty($trimmedText)) {
             $content = "Course Information:\n\n";
             $content .= "=== Course: {$course->title} ===\n";
-            $content .= "Description: " . $descriptionText . "\n\n";
+            $content .= "Description: " . $trimmedText . "\n\n";
         }
         
         return $content;
@@ -300,10 +300,18 @@ class QuizGeneratorService
         try {
             $resources = Resource::whereIn('id', $resourceIds)->get();
             return $resources->map(function ($resource) {
+                // *** ADDED ROBUST CLEANING HERE AS WELL ***
+                $decodedContent = html_entity_decode($resource->content ?? '');
+                $textContent = strip_tags($decodedContent);
+                $trimmedText = trim($textContent, " \t\n\r\0\x0B\xC2\xA0");
+                
                 return [
                     'title' => $resource->title,
-                    'content' => $resource->content
+                    'content' => $trimmedText // Use the cleaned text
                 ];
+            })->filter(function($resource) {
+                // Filter out resources that have no content after cleaning
+                return !empty($resource['content']);
             })->toArray();
         } catch (Exception $e) {
             Log::warning('Failed to fetch reference resources', [
@@ -368,7 +376,8 @@ class QuizGeneratorService
         
         $prompt .= "Return ONLY valid JSON.\n";
         $prompt .= "Do not include explanations, markdown, or code fences.\n";
-        $prompt .= "The JSON must be an array of exactly {$quizCount} quiz objects.\n\n";
+        $prompt .= "The JSON must be an array of exactly {$quizCount} quiz objects.\n";
+        $prompt .= "If you cannot generate questions from the content, return an empty array [].\n\n";
         
         $prompt .= "Each quiz object must include:\n";
         $prompt .= "- type (one of: " . implode(', ', $quizTypes) . ")\n";
@@ -444,16 +453,21 @@ class QuizGeneratorService
         $prompt .= "Important:\n";
         $prompt .= "- Output must be a single valid JSON array of quiz objects.\n";
         $prompt .= "- Do not include any explanations, markdown, or code fences.\n";
-        $prompt .= "- If you cannot comply, return an empty array [].\n\n";
+        $prompt .= "- If you cannot comply or find no content, return an empty array [].\n\n";
         
         $prompt .= "Content to base questions on:\n";
-        $prompt .= $lessonContent;
         
-        if (!empty($referenceContent)) {
-            $prompt .= "\n\nReference Resources:\n";
-            foreach ($referenceContent as $resource) {
-                $prompt .= "Title: {$resource['title']}\n";
-                $prompt .= "Content: {$resource['content']}\n\n";
+        if(empty(trim($lessonContent)) && empty($referenceContent)) {
+             $prompt .= "No content provided. Please return an empty array [].\n";
+        } else {
+            $prompt .= $lessonContent;
+            
+            if (!empty($referenceContent)) {
+                $prompt .= "\n\nReference Resources:\n";
+                foreach ($referenceContent as $resource) {
+                    $prompt .= "Title: {$resource['title']}\n";
+                    $prompt .= "Content: {$resource['content']}\n\n";
+                }
             }
         }
 
@@ -464,22 +478,12 @@ class QuizGeneratorService
      * Build a simpler prompt for quiz generation as fallback.
      * *** THIS FUNCTION HAS BEEN REMOVED / MERGED ***
      */
-    private function buildSimpleQuizPrompt(string $lessonContent, int $quizCount): string
-    {
-        // This function is no longer the source of the second prompt.
-        // We now re-use the main prompt builder with simpler options.
-        // This simple prompt is here as a failsafe, but shouldn't be used.
-        $prompt = "Generate {$quizCount} quiz questions based on this content:\n\n";
-        $prompt .= $lessonContent;
-        $prompt .= "\n\nCRITICAL: Return ONLY valid JSON in the exact format requested in previous instructions. Do not include explanations, markdown, or code fences.\n\n";
-        $prompt .= "Return ONLY a JSON array with this format:\n";
-        $prompt .= "[{\"type\":\"MULTIPLE_CHOICE\",\"question\":\"Your question here?\",\"options\":[{\"text\":\"Option A\",\"is_correct\":false},{\"text\":\"Option B\",\"is_correct\":true}],\"correct_answer\":\"Option B\",\"difficulty\":\"medium\",\"explanation\":\"Why this is correct\"}]\n\n";
-        
-        return $prompt;
-    }
+    // private function buildSimpleQuizPrompt(string $lessonContent, int $quizCount): string { ... }
+
 
     /**
      * Parse the LLM response and validate quiz structure.
+     * *** UPDATED TO NOT USE FALLBACK QUIZ ***
      */
     private function parseQuizResponse(string $response): array
     {
@@ -491,6 +495,12 @@ class QuizGeneratorService
 
             // With JSON mode, the response should be clean JSON
             $response = trim($response);
+            
+            // If AI returns empty array, just return it.
+            if ($response === '[]') {
+                Log::info('LLM returned an empty array, likely due to no content.');
+                return [];
+            }
             
             // Try to parse the JSON directly
             $quizzes = json_decode($response, true);
@@ -523,8 +533,9 @@ class QuizGeneratorService
                             'manually_fixed_response' => $response
                         ]);
                         
-                        // Try to create a fallback quiz if JSON parsing fails
-                        return $this->createFallbackQuiz($response);
+                        // If it fails after all this, return empty.
+                        return [];
+                        // return $this->createFallbackQuiz($response);
                     }
                 }
             }
@@ -539,6 +550,11 @@ class QuizGeneratorService
                 } else {
                     throw new Exception("Response is not a valid JSON array");
                 }
+            }
+            
+            // If we get here and quizzes is empty (e.g., from '[]'), just return it.
+            if (empty($quizzes)) {
+                return [];
             }
 
             $validatedQuizzes = [];
@@ -558,10 +574,12 @@ class QuizGeneratorService
             }
 
             if (empty($validatedQuizzes)) {
-                Log::error('No valid quizzes were parsed from the LLM response.', [
+                Log::error('No valid quizzes were parsed from the LLM response, though JSON was valid.', [
                     'original_response' => $response
                 ]);
-                return $this->createFallbackQuiz($response);
+                // Do not return fallback, return empty.
+                return [];
+                // return $this->createFallbackQuiz($response);
             }
 
             return $validatedQuizzes; // Return only the valid quizzes
@@ -571,13 +589,13 @@ class QuizGeneratorService
                 'error' => $e->getMessage(),
                 'response' => substr($response, 0, 1000)
             ]);
-            throw new Exception("Failed to parse quiz response: " . $e->getMessage());
+            // Do not throw, return empty
+            return [];
+            // throw new Exception("Failed to parse quiz response: " . $e->getMessage());
         }
     }
 
-    /**
-     * Fix common JSON issues in LLM responses.
-     */
+
     /**
      * Fix common JSON issues in LLM responses.
      */
@@ -628,7 +646,7 @@ class QuizGeneratorService
         $json = preg_replace('/[\x00-\x1F\x7F]/', '', $json);
         
         // Remove BOM
-        $json = str_replace("\xEF\BB\xBF", '', $json);
+        $json = str_replace("\xEF\xBB\xBF", '', $json);
 
         return trim($json);
     }
@@ -699,15 +717,10 @@ class QuizGeneratorService
         return $json;
     }
 
-    /**
-     * Fix truncated JSON by ensuring proper closing.
-     * *** THIS FUNCTION WAS REMOVED AS IT WAS PART OF THE PROBLEM ***
-     */
-    // private function fixTruncatedJson(string $json): string { ... }
-
 
     /**
      * Create a fallback quiz when JSON parsing fails.
+     * *** THIS FUNCTION IS NO LONGER USED, to allow for 0 results ***
      */
     private function createFallbackQuiz(string $response): array
     {
@@ -820,14 +833,14 @@ class QuizGeneratorService
                 // Create quiz question with lesson_id
                 $question = QuizQuestion::create([
                     'lesson_id' => $lessonId,
-                    'course_id' => $courseId,
+                    // 'course_id' => $courseId, // <-- REMOVED: This column does not exist per the error log
                     'question' => $quizData['question'],
                     'type' => $quizData['type'],
                     'position' => $position++,
                     'metadata' => [
                         'difficulty' => $quizData['difficulty'] ?? 'medium',
                         'explanation' => $quizData['explanation'] ?? '',
-                        'course_id' => $courseId,
+                        'course_id' => $courseId, // This is the correct place for it
                         'generated_at' => now()->toISOString()
                     ]
                 ]);
@@ -882,14 +895,14 @@ class QuizGeneratorService
                 // Create quiz question
                 $question = QuizQuestion::create([
                     'lesson_id' => null, // Will be assigned when lesson is selected
-                    'course_id' => $courseId, // *** ADDED course_id ***
+                    // 'course_id' => $courseId, // <-- REMOVED: This column does not exist per the error log
                     'question' => $quizData['question'],
                     'type' => $quizData['type'],
                     'position' => $position++,
                     'metadata' => [
                         'difficulty' => $quizData['difficulty'] ?? 'medium',
                         'explanation' => $quizData['explanation'] ?? '',
-                        'course_id' => $courseId,
+                        'course_id' => $courseId, // This is the correct place for it
                         'generated_at' => now()->toISOString()
                     ]
                 ]);
@@ -1005,22 +1018,29 @@ class QuizGeneratorService
 
     /**
      * Check if a course has content available for quiz generation.
+     * *** UPDATED TO USE PREPARE_LESSON_CONTENT FOR ACCURACY ***
      */
     public function checkCourseContent(int $courseId): array
     {
         $course = Course::findOrFail($courseId);
         $lessons = $this->fetchCourseLessons($courseId);
         
-        $hasLessons = $lessons->isNotEmpty();
-        $hasCourseDescription = !empty(trim($course->description));
+        $lessonContent = $this->prepareLessonContent($lessons);
+        $courseContent = $this->prepareCourseContent($course);
         
+        $hasUsableLessonContent = !empty(trim($lessonContent));
+        $hasUsableCourseContent = !empty(trim($courseContent));
+
         return [
             'course_id' => $courseId,
             'course_title' => $course->title,
-            'has_lessons' => $hasLessons,
+            'has_lessons' => $lessons->isNotEmpty(),
             'lesson_count' => $lessons->count(),
-            'has_course_description' => $hasCourseDescription,
-            'can_generate_quizzes' => $hasLessons || $hasCourseDescription
+            'has_usable_lesson_content' => $hasUsableLessonContent,
+            'has_usable_course_content' => $hasUsableCourseContent,
+            'can_generate_quizzes' => $hasUsableLessonContent || $hasUsableCourseContent
         ];
     }
 }
+
+

@@ -331,13 +331,14 @@ class HybridRagService
     /**
      * Generate content using Gemini AI
      */
+    /**
+     * Generate content using Gemini AI
+     */
     private function generateWithGemini(string $title, string $context, array $options = [], bool $jsonMode = false): string
     {
         try {
             
-            // --- FIX 1: Use the prompt from QuizGenerator, don't build a new one ---
-            // If in JSON mode, the $context *is* the real prompt.
-            // If not in JSON mode, build the HTML prompt.
+            // --- FIX A: Use the prompt from QuizGenerator, don't build a new one ---
             $finalPrompt = $jsonMode ? $context : $this->buildPrompt($title, $context, $options);
             
             $requestData = [
@@ -361,7 +362,7 @@ class HybridRagService
                 $requestData['generationConfig']['responseMimeType'] = 'application/json';
             }
 
-            // --- FIX 2: Add 120-second timeout to prevent cURL error 28 ---
+            // --- FIX B: Add 120-second timeout ---
             $response = Http::timeout(120)->withHeaders([ 
                 'Content-Type' => 'application/json',
             ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->geminiModel}:generateContent?key={$this->geminiApiKey}", $requestData);
@@ -370,7 +371,7 @@ class HybridRagService
                 $data = $response->json();
                 $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
                 
-                // --- FIX 3: Do NOT format JSON, return it raw ---
+                // --- FIX C: Do NOT format JSON, return it raw ---
                 if ($jsonMode) {
                     return $content; // Return the raw JSON string
                 }
@@ -396,7 +397,6 @@ class HybridRagService
             throw $e;
         }
     }
-
     /**
      * Build prompt for AI generation
      */
