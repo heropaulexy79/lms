@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 // *** ADD THIS ***
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\QuizQuestion;
+use App\Models\UserLesson; // <-- ADDED THIS IMPORT
 // *** END ADDITION ***
 
 class Lesson extends Model
@@ -31,14 +32,25 @@ class Lesson extends Model
         return $this->belongsTo(Course::class, 'course_id');
     }
 
-    // *** ADD THIS FUNCTION ***
+    // *** FIX: Renamed to 'quizQuestions' to match ClassroomController ***
     /**
      * Get the quiz questions for the lesson.
      */
-    public function questions(): HasMany
+    public function quizQuestions(): HasMany
     {
-        // This creates the $lesson->questions relationship
+        // This creates the $lesson->quizQuestions relationship
         return $this->hasMany(QuizQuestion::class, 'lesson_id', 'id')->orderBy('position');
+    }
+    // *** END FIX ***
+    
+    // *** ADD THIS FUNCTION (Fixes the error from your log) ***
+    /**
+     * Get the user-specific data for this lesson.
+     */
+    public function userLessons(): HasMany
+    {
+        // This creates the $lesson->userLessons relationship
+        return $this->hasMany(UserLesson::class, 'lesson_id', 'id');
     }
     // *** END ADDITION ***
     
