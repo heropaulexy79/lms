@@ -32,13 +32,13 @@ class Lesson extends Model
         return $this->belongsTo(Course::class, 'course_id');
     }
 
-    // *** FIX: Renamed to 'quizQuestions' to match ClassroomController ***
+    // *** FIX: Renamed back to 'questions' to match your controllers ***
     /**
      * Get the quiz questions for the lesson.
      */
-    public function quizQuestions(): HasMany
+    public function questions(): HasMany
     {
-        // This creates the $lesson->quizQuestions relationship
+        // This creates the $lesson->questions relationship
         return $this->hasMany(QuizQuestion::class, 'lesson_id', 'id')->orderBy('position');
     }
     // *** END FIX ***
@@ -76,3 +76,4 @@ class Lesson extends Model
         }, $quiz);
     }
 }
+
