@@ -20,60 +20,67 @@ class ClassroomController extends Controller
 
     public function showLessons(Request $request, Course $course)
     {
+
         $user = $request->user();
 
-        // --- FIX START: Original logic was flawed ---
-        
-        // 1. Find the position of the last completed lesson
-        $lastCompletedLessonPosition = UserLesson::where('user_id', $user->id)
+        $lastCompletedLesson = UserLesson::where('user_id', $user->id)
+            ->where('completed', 1)
             ->join('lessons', 'user_lessons.lesson_id', '=', 'lessons.id')
-            ->where('user_lessons.completed', 1)
+            ->select('user_lessons.*', 'lessons.course_id', 'lessons.is_published', 'lessons.position', 'lessons.slug')
             ->where('lessons.is_published', 1)
             ->where('lessons.course_id', $course->id)
             ->orderBy('lessons.position', 'desc')
-            ->value('lessons.position'); // Get just the position
+            ->first();
 
-        $redirectLesson = null;
-
-        if ($lastCompletedLessonPosition) {
-            // 2. User has completed at least one lesson. Find the *next* one.
-            $redirectLesson = $course->publishedLessons() // Use fixed relationship
-                ->where('position', '>', $lastCompletedLessonPosition)
-                ->orderBy('position')
+        // Find the next lesson slug
+        $redirectLessonSlug = null;
+        if ($lastCompletedLesson) {
+            // Find the *next* lesson after the last completed one
+            $nextLesson = $course->lessons()
+                ->where('is_published', true)
+                ->where('position', '>', $lastCompletedLesson->position)
+                ->orderBy('position', 'asc')
                 ->first();
-        }
-
-        if (!$redirectLesson) {
-            // 3. If no last completed lesson OR no next lesson, get the very first lesson.
-            $redirectLesson = $course->publishedLessons() // Use fixed relationship
-                ->orderBy('position')
+            
+            $redirectLessonSlug = $nextLesson ? $nextLesson->slug : $lastCompletedLesson->slug; // Stay on last lesson if it's the final one
+        } else {
+            // No lessons completed, redirect to the very first lesson
+            $firstLesson = $course->lessons()
+                ->where('is_published', true)
+                ->orderBy('position', 'asc')
                 ->first();
+            
+            if ($firstLesson) {
+                $redirectLessonSlug = $firstLesson->slug;
+            } else {
+                // No published lessons in this course, redirect to dashboard
+                return redirect(route('dashboard'))->with('message', [
+                    'status' => 'error',
+                    'message' => 'This course has no published lessons.'
+                ]);
+            }
         }
 
-        // 4. If there are no published lessons at all, redirect back to course page.
-        if (!$redirectLesson) {
-            return redirect(route('course.show', $course))->with('error', 'This course has no published lessons.');
-        }
-        
-        // 5. Redirect to the correct lesson
-        return redirect(route('classroom.lesson.show', [
-            'course' => $course->slug,
-            'lesson' => $redirectLesson->slug
-        ]));
-        // --- FIX END ---
+        return redirect(route('classroom.lesson.show', ['course' => $course->slug, 'lesson' => $redirectLessonSlug]));
     }
 
 
     public function showLesson(Request $request, Course $course, Lesson $lesson)
     {
+
         $user = $request->user();
 
         $temp_content_json = $lesson->content_json;
+        $hasAiQuestions = false; // Initialize checker variable
 
         if ($lesson->type === Lesson::TYPE_QUIZ) {
+            
+            // *** QUIZ FIX: Directly fetch questions to bypass stale model state ***
+            $aiGeneratedQuestions = $lesson->quizQuestions()->with('options')->get();
+
             // Prioritize AI-generated quizzes from quiz_questions table
-            if ($lesson->hasAiGeneratedQuestions()) {
-                $aiGeneratedQuestions = $lesson->quizQuestions()->with('options')->get();
+            if ($aiGeneratedQuestions->isNotEmpty()) {
+                $hasAiQuestions = true; // Mark that we found AI questions
                 // Convert AI-generated questions to the format expected by frontend
                 $lesson->content_json = $this->formatAiGeneratedQuestions($aiGeneratedQuestions);
             } else {
@@ -82,27 +89,18 @@ class ClassroomController extends Controller
             }
         }
 
-        // --- FIX: Use publishedLessons() relationship ---
-        $lessons = $course->publishedLessons()->orderBy('position')
-        // $lessons = $course->lessons()->published()->orderBy('position') // <-- Original code
-            ->with(['user_lesson' => function ($query) use ($user) {
+        $lessons = $course->lessons()
+            ->where('is_published', true)
+            ->orderBy('position')
+            ->with(['userLessons' => function ($query) use ($user) { // <-- FIX: Changed user_lesson to userLessons
                 $query->where('user_id', $user->id);
             }])
             ->get(['title', 'position', 'type', 'id', 'slug',]);
         
         $total_completed = 0;
 
-        // foreach ($lessons as $l) {
-        //     $l->completed = UserLesson::where('user_id', $user->id)
-        //         ->where('lesson_id', $l->id)
-        //         ->where('completed', 1)->exists() ?? false;
-
-        //     if ($l->completed) {
-        //         $total_completed++;
-        //     }
-        // };
         foreach ($lessons as $l) {
-            $l->completed = $l->user_lesson->first()?->completed === 1;
+            $l->completed = $l->userLessons->first()?->completed === 1; // <-- FIX: Changed user_lesson to userLessons
 
 
             if ($l->completed) {
@@ -110,12 +108,7 @@ class ClassroomController extends Controller
             }
         };
 
-
-
-
-        // dd($lessons);
-
-        if ($total_completed === count($lessons)) {
+        if (count($lessons) > 0 && $total_completed === count($lessons)) {
             $enrollment = CourseEnrollment::where('user_id', $user->id)
                 ->where('course_id', $course->id)
                 ->first();
@@ -126,21 +119,23 @@ class ClassroomController extends Controller
             }
         }
 
-        $user_lesson = $lessons->filter(function ($item) use ($lesson) {
+        $user_lesson_data = $lessons->filter(function ($item) use ($lesson) {
             return $item['id'] === $lesson->id;  // Strict comparison with ===
-        })->first()->user_lesson->first();
+        })->first();
+
+        // <-- FIX: Changed user_lesson to userLessons
+        $user_lesson = $user_lesson_data ? $user_lesson_data->userLessons->first() : null;
 
 
         $lesson->completed = $user_lesson?->completed === 1;
         $lesson->answers = $user_lesson?->answers ?? null;
 
-        // For completed lessons, only restore legacy JSON for non-AI quizzes.
-        // AI-generated quizzes should keep the formatted quizQuestions JSON we built above.
-        if ($lesson->completed && !$lesson->hasAiGeneratedQuestions()) {
+        // *** QUIZ FIX: Use our new variable instead of the stale hasAiGeneratedQuestions() method ***
+        if ($lesson->completed && !$hasAiQuestions) {
             $lesson->content_json = $temp_content_json;
         }
 
-        $lessons->makeHidden('user_lesson');
+        $lessons->makeHidden('userLessons'); // <-- FIX: Changed user_lesson to userLessons
 
         return Inertia::render('Classroom/Lesson', [
             'course' => $course,
@@ -151,12 +146,12 @@ class ClassroomController extends Controller
 
     public function showCompleted(Request $request, Course $course)
     {
+
         $user = $request->user();
-        
-        // --- FIX: Use publishedLessons() relationship ---
-        $lessons = $course->publishedLessons()->orderBy('position')
-        // $lessons = $course->lessons()->published()->orderBy('position') // <-- Original code
-            ->with(['user_lesson' => function ($query) use ($user) {
+        $lessons = $course->lessons()
+            ->where('is_published', true)
+            ->orderBy('position')
+            ->with(['userLessons' => function ($query) use ($user) { // <-- FIX: Changed user_lesson to userLessons
                 $query->where('user_id', $user->id);
             }])
             ->get(['title', 'position', 'type', 'id', 'slug',]);
@@ -164,7 +159,7 @@ class ClassroomController extends Controller
         $total_completed = 0;
 
         foreach ($lessons as $l) {
-            $l->completed = $l->user_lesson->first()?->completed === 1;
+            $l->completed = $l->userLessons->first()?->completed === 1; // <-- FIX: Changed user_lesson to userLessons
             if ($l->completed) {
                 $total_completed++;
             }
@@ -173,22 +168,20 @@ class ClassroomController extends Controller
         $enrollment = CourseEnrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->first();
-        if ($total_completed === count($lessons)) {
+
+        $lesson_count = count($lessons);
+
+        if ($lesson_count > 0 && $total_completed === $lesson_count) {
+
             if ($enrollment) {
                 $enrollment->is_completed = true;
                 $enrollment->save();
             }
         }
 
+        $lessons->makeHidden('userLessons'); // <-- FIX: Changed user_lesson to userLessons
 
-        $lessons->makeHidden('user_lesson');
 
-
-        // if (!$enrollment->is_completed) {
-        //     return redirect(route('classroom.lesson.index', ['course' => $course->slug]));
-        // }
-
-        // dd($enrollment);
         $userScores = $user->lessons()
             ->with('lesson')
             ->whereHas('lesson', function ($query) use ($course) {
@@ -201,7 +194,7 @@ class ClassroomController extends Controller
             'course' => $course,
             'lessons' => $lessons,
             'enrollment' => $enrollment,
-            'progress' => ($total_completed / count($lessons) * 100),
+            'progress' => ($lesson_count > 0 ? ($total_completed / $lesson_count) * 100 : 0),
             'completed_lessons' => $total_completed,
             'total_score' => $userScores->sum('score'),
         ]);
@@ -211,19 +204,14 @@ class ClassroomController extends Controller
 
     public function markLessonComplete(Request $request, Course $course, Lesson $lesson)
     {
-        $user = $request->user();
 
-        // $user_lesson = UserLesson::where('user_id', $user->id)
-        // ->where('lesson_id', $lessonId)
-        // ->first();
+        $user = $request->user();
 
         UserLesson::upsert(
             [['user_id' => $user->id, 'lesson_id' => $lesson->id, 'completed' => true],],
             uniqueBy: ['user_id', 'lesson_id'],
             update: ['completed']
         );
-
-        // TODO: MOve complete enrollment here?
 
         $next_lesson_id = $request->query('next') ?? $lesson->slug;
 
@@ -238,16 +226,17 @@ class ClassroomController extends Controller
         $request->validate([
             'answers' => 'required|array|min:0',
             'answers.*.question_id' => 'required',
-            // selected_option can be string (single/true_false/type_answer) or array (multiple_select)
             'answers.*.selected_option' => 'nullable',
         ]);
 
         $score = 0.0;
         $total = 0.0;
 
+        // *** QUIZ FIX: Directly fetch questions to ensure we have them ***
+        $aiGeneratedQuestions = $lesson->quizQuestions()->with('options')->get();
+
         // Check if this is an AI-generated quiz
-        if ($lesson->hasAiGeneratedQuestions()) {
-            $aiGeneratedQuestions = $lesson->quizQuestions()->with('options')->get();
+        if ($aiGeneratedQuestions->isNotEmpty()) {
             // Handle AI-generated quiz scoring
             $answers = $request->input('answers');
             
@@ -257,7 +246,6 @@ class ClassroomController extends Controller
                 
                 $total++;
                 
-                // Check if answer is correct based on question type
                 if ($this->isAnswerCorrect($question, $answer['selected_option'])) {
                     $score++;
                 }
@@ -266,6 +254,13 @@ class ClassroomController extends Controller
             // Fallback to old quiz scoring system
             $quiz = $lesson->content_json;
             $answers = $request->input('answers');
+
+            if (is_null($quiz)) { 
+                return redirect()->back()->with('message', [
+                    'status' => 'error',
+                    'message' => 'Quiz content is missing.',
+                ]);
+            }
 
             foreach ($answers as $key => $value) {
                 $v = array_search($value['question_id'],  array_column($quiz, 'id'));
@@ -289,9 +284,8 @@ class ClassroomController extends Controller
         }
 
 
-        $scoreInPercent = ($score / $total) * 100;
+        $scoreInPercent = ($total > 0) ? (($score / $total) * 100) : 0;
 
-        // Todo : Quiz, lesson
         UserLesson::upsert(
             [[
                 'user_id' => $user->id,
@@ -311,9 +305,6 @@ class ClassroomController extends Controller
         ]);
     }
 
-    /**
-     * Format AI-generated quiz questions to match the expected frontend format
-     */
     private function formatAiGeneratedQuestions($questions)
     {
         return $questions->map(function ($question) {
@@ -324,7 +315,6 @@ class ClassroomController extends Controller
                 'options' => []
             ];
 
-            // Add options for questions that have them
             if ($question->options->isNotEmpty()) {
                 foreach ($question->options as $option) {
                     $formatted['options'][] = [
@@ -335,8 +325,7 @@ class ClassroomController extends Controller
                 }
             }
 
-            // Add correct_option for compatibility with existing frontend
-            if ($question->options->isNotEmpty()) {
+            if ($question->type === 'MULTIPLE_CHOICE' && $question->options->isNotEmpty()) {
                 $correctOption = $question->options->where('is_correct', true)->first();
                 if ($correctOption) {
                     $formatted['correct_option'] = (string) $correctOption->id;
@@ -347,9 +336,6 @@ class ClassroomController extends Controller
         })->toArray();
     }
 
-    /**
-     * Map AI-generated question types to frontend expected types
-     */
     private function mapQuestionType($aiType)
     {
         $typeMap = [
@@ -363,21 +349,16 @@ class ClassroomController extends Controller
         return $typeMap[$aiType] ?? 'single_choice';
     }
 
-    /**
-     * Check if an answer is correct for AI-generated questions
-     */
     private function isAnswerCorrect($question, $selectedOption)
     {
         switch ($question->type) {
             case 'MULTIPLE_CHOICE':
             case 'TRUE_FALSE':
-                // For single choice, check if selected option is correct
                 $correctOption = $question->options->where('is_correct', true)->first();
                 return $correctOption && $correctOption->id == $selectedOption;
                 
             case 'MULTIPLE_SELECT':
-                // Ensure arrays
-                $selected = is_array($selectedOption) ? $selectedOption : [$selectedOption];
+                $selected = is_array($selectedOption) ? $selectedOption : (is_null($selectedOption) ? [] : [$selectedOption]);
                 $selected = array_filter($selected, fn($v) => !is_null($v) && $v !== '');
 
                 $correctIds = $question->options->where('is_correct', true)->pluck('id')->map(fn($id) => (string)$id)->values()->toArray();
@@ -388,9 +369,12 @@ class ClassroomController extends Controller
                 
             case 'TYPE_ANSWER':
             case 'PUZZLE':
-                // For text-based answers, check against metadata
-                $correctAnswer = $question->metadata['correct_answer'] ?? '';
-                return strtolower(trim($selectedOption)) === strtolower(trim($correctAnswer));
+                $correctAnswer = $question->metadata['correct_answer'] ?? null;
+                if (is_null($correctAnswer)) {
+                    $correctOption = $question->options->where('is_correct', true)->first();
+                    $correctAnswer = $correctOption ? $correctOption->option_text : '';
+                }
+                return is_string($selectedOption) && strtolower(trim($selectedOption)) === strtolower(trim($correctAnswer));
                 
             default:
                 return false;

@@ -64,7 +64,8 @@ class CourseController extends Controller
         return Inertia::render('Course/View', [
             'course' => $course,
             'enrolled_count' => $course->enrolledUsers()->count(),
-            'lessons' => $course->lessons()->published()->get(['title', 'position']),
+            'lessons' => $course->lessons()->where('is_published', true)->get(['title', 'position']), // <-- CORRECT FIX
         ]);
     }
 }
+
