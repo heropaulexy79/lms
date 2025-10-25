@@ -8,6 +8,7 @@ use App\Models\Lesson;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB; // <-- ADDED
 
 class LessonController extends Controller
 {
@@ -78,7 +79,7 @@ class LessonController extends Controller
         $organisation = $user->organisation();
 
         if ($user->cannot('view', $user->organisation) || $organisation->id !== $course->organisation_id) {
-            return abort(404);
+            return abort(404); // <-- SYNTAX ERROR FIXED
         }
 
         // $lesson->content_json = json_decode($lesson->content_json);
@@ -186,9 +187,54 @@ class LessonController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Lesson $lesson)
+    public function destroy(Request $request, Course $course, Lesson $lesson) // <-- UPDATED
     {
-        // TODO: Delete a lesson 
-        // Cannot delete lesson if ? 
+        $user = $request->user();
+        $organisation = $user->organisation();
+
+        // Authorize the user (using 'update' policy as a proxy for managing content)
+        if ($user->cannot('update', $organisation)) {
+            return abort(403);
+        }
+
+        // Ensure the lesson belongs to the course and the course to the org
+        if ($course->organisation_id !== $organisation->id || $lesson->course_id !== $course->id) {
+             return abort(403);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // 1. Delete all related student progress (UserLesson records)
+            $lesson->userLessons()->delete();
+
+            // 2. Delete all related quiz questions (QuizQuestion records)
+            // This assumes the QuizQuestion model will handle deleting its own options
+            // via an observer or a foreign key cascade delete.
+            $lesson->questions()->delete();
+
+            // 3. Delete the lesson itself
+            $lesson->delete();
+
+            DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Log the error for debugging
+            \Log::error('Failed to delete lesson ' . $lesson->id . ': ' . $e->getMessage());
+            
+            // Return an error message to the user
+            return redirect()->back()->with('message', [
+                'status' => 'error',
+                'message' => 'Failed to delete the lesson. Please try again.'
+            ]);
+        }
+
+        // Redirect back to the lesson list page (Organisation/Course/View)
+        return redirect()->back()->with('message', [
+             'status' => 'success',
+             'message' => 'Lesson deleted successfully.'
+        ]);
     }
 }
+

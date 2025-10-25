@@ -4,6 +4,7 @@ import { Link } from "@inertiajs/vue3";
 import { createColumnHelper } from "@tanstack/vue-table";
 import { GripVertical } from "lucide-vue-next";
 import { h } from "vue";
+import LessonColumnRowAction from './LessonColumnRowAction.vue';
 
 const columnHelper = createColumnHelper<Lesson>();
 
@@ -85,16 +86,17 @@ export const lessonColumns = [
     //     size: 200,
     // }),
 
-    // TODO: DELETE MEMBERSHIP
-    // columnHelper.display({
-    //     id: 'actions',
-    //     enableHiding: false,
-    //     cell: ({ row }) => {
-    //       const payment = row.original
-
-    //       return h('div', { class: 'relative' }, h(DropdownAction, {
-    //         payment,
-    //       }))
-    //     },
-    //   }),
+    // *** ADDED ACTIONS COLUMN ***
+    columnHelper.display({
+        id: 'actions',
+        enableHiding: false,
+        cell: ({ row }) => {
+            const lesson = row.original;
+            
+            // This renders your new Vue component for this row
+            return h(LessonColumnRowAction, {
+                lesson: lesson,
+            });
+        },
+    }),
 ];

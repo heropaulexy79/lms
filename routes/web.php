@@ -175,5 +175,10 @@ Route::get('/preview/welcome', function () {
     return $mail->render();
 });
 
+// Inside routes/web.php
+
+Route::delete('/courses/{course}/lessons/{lesson}', [LessonController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('lesson.destroy');
 
 require __DIR__ . '/auth.php';

@@ -11,7 +11,6 @@ use Inertia\Inertia;
 
 class ClassroomController extends Controller
 {
-    // Only allow if user is enrolled
 
     public function showCourse(Request $request, Course $course)
     {
@@ -32,10 +31,8 @@ class ClassroomController extends Controller
             ->orderBy('lessons.position', 'desc')
             ->first();
 
-        // Find the next lesson slug
         $redirectLessonSlug = null;
         if ($lastCompletedLesson) {
-            // Find the *next* lesson after the last completed one
             $nextLesson = $course->lessons()
                 ->where('is_published', true)
                 ->where('position', '>', $lastCompletedLesson->position)
@@ -44,7 +41,7 @@ class ClassroomController extends Controller
             
             $redirectLessonSlug = $nextLesson ? $nextLesson->slug : $lastCompletedLesson->slug; // Stay on last lesson if it's the final one
         } else {
-            // No lessons completed, redirect to the very first lesson
+
             $firstLesson = $course->lessons()
                 ->where('is_published', true)
                 ->orderBy('position', 'asc')
@@ -75,17 +72,13 @@ class ClassroomController extends Controller
 
         if ($lesson->type === Lesson::TYPE_QUIZ) {
             
-            // *** QUIZ FIX: Directly fetch questions to bypass stale model state ***
-            // *** FIX: Renamed 'quizQuestions' to 'questions' to match Lesson model ***
             $aiGeneratedQuestions = $lesson->questions()->with('options')->get();
 
-            // Prioritize AI-generated quizzes from quiz_questions table
+
             if ($aiGeneratedQuestions->isNotEmpty()) {
-                $hasAiQuestions = true; // Mark that we found AI questions
-                // Convert AI-generated questions to the format expected by frontend
+                $hasAiQuestions = true; 
                 $lesson->content_json = $this->formatAiGeneratedQuestions($aiGeneratedQuestions);
             } else {
-                // Fallback to old content_json format
                 $lesson->content_json = $lesson->quizWithoutCorrectAnswer();
             }
         }
@@ -93,15 +86,15 @@ class ClassroomController extends Controller
         $lessons = $course->lessons()
             ->where('is_published', true)
             ->orderBy('position')
-            ->with(['userLessons' => function ($query) use ($user) { // <-- This line is correct
+            ->with(['userLessons' => function ($query) use ($user) { 
                 $query->where('user_id', $user->id);
             }])
-            ->get(['title', 'position', 'type', 'id', 'slug',]); // <-- This is where the error triggers
+            ->get(['title', 'position', 'type', 'id', 'slug',]); 
         
         $total_completed = 0;
 
         foreach ($lessons as $l) {
-            $l->completed = $l->userLessons->first()?->completed === 1; // <-- This line is correct
+            $l->completed = $l->userLessons->first()?->completed === 1;
 
 
             if ($l->completed) {
@@ -121,7 +114,7 @@ class ClassroomController extends Controller
         }
 
         $user_lesson_data = $lessons->filter(function ($item) use ($lesson) {
-            return $item['id'] === $lesson->id;  // Strict comparison with ===
+            return $item['id'] === $lesson->id;
         })->first();
 
         
@@ -131,12 +124,12 @@ class ClassroomController extends Controller
         $lesson->completed = $user_lesson?->completed === 1;
         $lesson->answers = $user_lesson?->answers ?? null;
 
-        // *** QUIZ FIX: Use our new variable instead of the stale hasAiGeneratedQuestions() method ***
+        
         if ($lesson->completed && !$hasAiQuestions) {
             $lesson->content_json = $temp_content_json;
         }
 
-        $lessons->makeHidden('userLessons'); // <-- This line is correct
+        $lessons->makeHidden('userLessons'); 
 
         return Inertia::render('Classroom/Lesson', [
             'course' => $course,
@@ -180,7 +173,7 @@ class ClassroomController extends Controller
             }
         }
 
-        $lessons->makeHidden('userLessons'); // <-- This line is correct
+        $lessons->makeHidden('userLessons'); 
 
 
         $userScores = $user->lessons()
@@ -188,7 +181,7 @@ class ClassroomController extends Controller
             ->whereHas('lesson', function ($query) use ($course) {
                 $query->where('course_id', $course->id);
             })
-            ->select('user_lessons.score') // Select specific columns
+            ->select('user_lessons.score')
             ->get();
 
         return Inertia::render('Classroom/Completed', [
@@ -233,13 +226,11 @@ class ClassroomController extends Controller
         $score = 0.0;
         $total = 0.0;
 
-        // *** QUIZ FIX: Directly fetch questions to ensure we have them ***
-        // *** FIX: Renamed 'quizQuestions' to 'questions' to match Lesson model ***
+        
         $aiGeneratedQuestions = $lesson->questions()->with('options')->get();
 
         // Check if this is an AI-generated quiz
         if ($aiGeneratedQuestions->isNotEmpty()) {
-            // Handle AI-generated quiz scoring
             $answers = $request->input('answers');
             
             foreach ($answers as $answer) {
@@ -253,7 +244,6 @@ class ClassroomController extends Controller
                 }
             }
         } else {
-            // Fallback to old quiz scoring system
             $quiz = $lesson->content_json;
             $answers = $request->input('answers');
 

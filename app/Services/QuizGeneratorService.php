@@ -699,9 +699,6 @@ class QuizGeneratorService
         // Remove any BOM
         $json = str_replace("\xEF\xBB\xBF", '', $json);
         
-        // Don't try to extract JSON array - just clean what we have
-        // The issue might be that we're truncating valid JSON
-        
         // Fix any remaining quote issues
         $json = preg_replace('/\\\\"/', '"', $json);
         
@@ -717,11 +714,6 @@ class QuizGeneratorService
         return $json;
     }
 
-
-    /**
-     * Create a fallback quiz when JSON parsing fails.
-     * *** THIS FUNCTION IS NO LONGER USED, to allow for 0 results ***
-     */
     private function createFallbackQuiz(string $response): array
     {
         Log::warning('Creating fallback quiz due to JSON parsing failure', [
@@ -746,10 +738,7 @@ class QuizGeneratorService
         ];
     }
 
-    /**
-     * Validate the structure of a single quiz.
-     * *** THIS FUNCTION HAS BEEN UPDATED TO MATCH THE NEW PROMPTS ***
-     */
+    
     private function validateQuizStructure(array $quiz, int $index): void
     {
         // 'correct_answer' and 'explanation' are now required from the prompt
@@ -820,9 +809,7 @@ class QuizGeneratorService
         }
     }
 
-    /**
-     * Store generated quizzes in the database for a specific lesson.
-     */
+    
     private function storeGeneratedQuizzesForLesson(array $quizzes, int $lessonId, int $courseId): array
     {
         $storedQuizzes = [];
@@ -858,8 +845,7 @@ class QuizGeneratorService
                     }
                 }
 
-                // Store correct answer in metadata for type answer and puzzle questions
-                // This logic is now consistent with the prompt
+                
                 if (in_array($quizData['type'], [QuizQuestion::TYPE_TYPE_ANSWER, QuizQuestion::TYPE_PUZZLE])) {
                     $metadata = $question->metadata;
                     $metadata['correct_answer'] = $quizData['correct_answer'] ?? '';
@@ -874,17 +860,13 @@ class QuizGeneratorService
                     'quiz_data' => $quizData,
                     'error' => $e->getMessage()
                 ]);
-                // Don't throw, just log and continue
-                // throw new Exception("Failed to store quiz: " . $e->getMessage());
             }
         }
 
         return $storedQuizzes;
     }
 
-    /**
-     * Store generated quizzes in the database.
-     */
+    
     private function storeGeneratedQuizzes(array $quizzes, int $courseId): array
     {
         $storedQuizzes = [];
@@ -920,8 +902,7 @@ class QuizGeneratorService
                     }
                 }
 
-                // Store correct answer in metadata for type answer and puzzle questions
-                // This logic is now consistent with the prompt
+                
                 if (in_array($quizData['type'], [QuizQuestion::TYPE_TYPE_ANSWER, QuizQuestion::TYPE_PUZZLE])) {
                     $metadata = $question->metadata;
                     $metadata['correct_answer'] = $quizData['correct_answer'] ?? '';
@@ -944,9 +925,7 @@ class QuizGeneratorService
         return $storedQuizzes;
     }
 
-    /**
-     * Assign generated quizzes to a specific lesson.
-     */
+    
     public function assignQuizzesToLesson(array $questionIds, int $lessonId): array
     {
         try {
@@ -984,17 +963,13 @@ class QuizGeneratorService
         }
     }
 
-    /**
-     * Get available quiz types.
-     */
+   
     public function getAvailableQuizTypes(): array
     {
         return QuizQuestion::getTypes();
     }
 
-    /**
-     * Get quiz generation statistics for a course.
-     */
+
     public function getQuizStats(int $courseId): array
     {
         // *** UPDATED to query by course_id directly ***
@@ -1016,10 +991,7 @@ class QuizGeneratorService
         ];
     }
 
-    /**
-     * Check if a course has content available for quiz generation.
-     * *** UPDATED TO USE PREPARE_LESSON_CONTENT FOR ACCURACY ***
-     */
+
     public function checkCourseContent(int $courseId): array
     {
         $course = Course::findOrFail($courseId);
