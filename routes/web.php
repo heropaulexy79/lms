@@ -105,6 +105,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/settings/billing', [SubscriptionController::class, 'index'])->name('organisation.billing.index');
 
     // *** ADDED COURSE TEMPLATE ROUTES HERE ***
+    
+    // THIS IS THE NEW PREVIEW ROUTE
+    Route::get('/org/course-templates/{templateCourse}', [CourseTemplateController::class, 'show'])->name('organisation.course.template.show')->middleware(['subscribed']);
+    
     Route::get('/org/course-templates', [CourseTemplateController::class, 'index'])->name('organisation.course.template.index')->middleware(['subscribed']);
     Route::post('/org/course-templates/{templateCourse}', [CourseTemplateController::class, 'store'])->name('organisation.course.template.store')->middleware(['subscribed']);
     // *** END ADDITION ***

@@ -4,54 +4,79 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str; // Import the Str class
 
 class Course extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'title',
-        'description',
         'slug',
+        'description',
         'teacher_id',
-        'organisation_id',
         'is_published',
         'banner_image',
+        'organisation_id', // Make sure this is fillable
+        'is_template',     // Make sure this is fillable
     ];
 
     protected $casts = [
         'is_published' => 'boolean',
+        'is_template' => 'boolean', // Add this cast
     ];
 
-    // public function getIsPublishedAttribute($value)
-    // {
-    //     if ($value === "" || $value === 0) return false;
-    //     return true;
-    // }
-
-    public function scopePublished($query)
+    /**
+     * Get the lessons for the course.
+     */
+    public function lessons(): HasMany
     {
-        return $query->where('is_published', true);
+        return $this->hasMany(Lesson::class)->orderBy('position');
     }
 
-    public function teacher()
+    /**
+     * Get the organisation that owns the course.
+     */
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class);
+    }
+
+    /**
+     * Get the teacher (User) who created the course.
+     */
+    public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
 
-    public function organisation()
+    /**
+     * Get the enrollments for the course.
+     */
+    public function enrollments(): HasMany
     {
-        return $this->belongsTo(Organisation::class, 'organisation_id');
+        return $this->hasMany(CourseEnrollment::class);
     }
 
-    public function lessons()
+    /**
+     * Generate a unique slug for a new course.
+     * We pass $organisationId to keep the signature, but we check globally.
+     */
+    public static function generateUniqueSlug(string $title, ?int $organisationId): string
     {
-        return $this->hasMany(Lesson::class, 'course_id');
-    }
+        $slug = Str::slug($title);
+        $originalSlug = $slug;
+        $count = 1;
 
-    public function enrolledUsers()
-    {
-        return $this->belongsToMany(User::class, 'course_enrollments');
+        // *** FIX: Check for the slug globally, not just within the organisation ***
+        // This matches your database's global unique constraint.
+        while (static::where('slug', $slug)->exists()) {
+            $slug = $originalSlug . '-' . $count++;
+        }
+
+        return $slug;
     }
 }
+

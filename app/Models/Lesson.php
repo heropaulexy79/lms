@@ -5,18 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
-// *** ADD THIS ***
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo; // Added this import
 use App\Models\QuizQuestion;
-use App\Models\UserLesson; // <-- ADDED THIS IMPORT
-// *** END ADDITION ***
+use App\Models\UserLesson;
+use Illuminate\Support\Str; // Added this import
 
 class Lesson extends Model
 {
     use HasFactory;
 
-    const TYPE_DEFAULT = 'DEFAULT';
-    const TYPE_QUIZ = 'QUIZ';
+    public const TYPE_DEFAULT = 'DEFAULT';
+    public const TYPE_QUIZ = 'QUIZ';
 
     protected $fillable = [
         'title', 'slug', 'content', 'course_id', 'position', 'is_published', 'type', 'content_json'
@@ -27,12 +27,14 @@ class Lesson extends Model
         'content_json' => 'array',
     ];
 
-    public function course()
+    /**
+     * Get the course that owns the lesson.
+     */
+    public function course(): BelongsTo // Added return type
     {
         return $this->belongsTo(Course::class, 'course_id');
     }
 
-    // *** FIX: Renamed back to 'questions' to match your controllers ***
     /**
      * Get the quiz questions for the lesson.
      */
@@ -41,9 +43,7 @@ class Lesson extends Model
         // This creates the $lesson->questions relationship
         return $this->hasMany(QuizQuestion::class, 'lesson_id', 'id')->orderBy('position');
     }
-    // *** END FIX ***
-    
-    // *** ADD THIS FUNCTION (Fixes the error from your log) ***
+
     /**
      * Get the user-specific data for this lesson.
      */
@@ -52,8 +52,26 @@ class Lesson extends Model
         // This creates the $lesson->userLessons relationship
         return $this->hasMany(UserLesson::class, 'lesson_id', 'id');
     }
-    // *** END ADDITION ***
-    
+
+    /**
+     * Generate a unique slug for a new lesson.
+     * We pass $courseId to keep the signature, but we check globally.
+     */
+    public static function generateUniqueSlug(string $title, int $courseId): string
+    {
+        $slug = Str::slug($title);
+        $originalSlug = $slug;
+        $count = 1;
+
+        // *** FIX: Check for the slug globally, not just within the course ***
+        // This matches your database's global unique constraint.
+        while (static::where('slug', $slug)->exists()) {
+            $slug = $originalSlug . '-' . $count++;
+        }
+
+        return $slug;
+    }
+
     public function quizWithoutCorrectAnswer()
     {
         $quiz = $this->content_json;
@@ -72,6 +90,7 @@ class Lesson extends Model
                     return $option;
                 }, $question['options']);
             }
+    
             return $question;
         }, $quiz);
     }

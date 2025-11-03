@@ -74,6 +74,9 @@ export interface Course {
     created_at: Date;
     deleted_at: Date | null;
     updated_at: Date | null;
+
+    // ADDED FOR COURSE TEMPLATE PREVIEW
+    lessons?: Lesson[];
 }
 
 export interface Lesson {
@@ -89,6 +92,9 @@ export interface Lesson {
 
     created_at: Date;
     deleted_at: Date | null;
+
+    // ADDED FOR COURSE TEMPLATE PREVIEW
+    questions?: QuizQuestion[];
 }
 
 export type Question = SingleChoice | MultipleChoice;
@@ -206,4 +212,21 @@ export interface Group {
     created_at: Date;
     updated_at: Date;
     deleted_at: Date | null;
+}
+
+// ADDED FOR COURSE TEMPLATE PREVIEW (DATABASE-DRIVEN QUIZZES)
+export interface QuizQuestion {
+    id: number;
+    lesson_id: number;
+    question: string;
+    type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | (string & {});
+    position: number;
+    options: QuizOption[];
+}
+
+export interface QuizOption {
+    id: number;
+    quiz_question_id: number;
+    option_text: string;
+    is_correct: boolean;
 }
