@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import CourseTable from "./Partials/CourseTable.vue";
 import { Course } from "@/types";
 import {
@@ -60,7 +60,8 @@ defineProps<{ courses: Course[] }>();
                                 >
                                     <DialogTitle>Upload Resource</DialogTitle>
                                     <DialogDescription>
-                                        Upload documents or paste text to create searchable content
+                                        Upload documents or paste text to create
+                                        searchable content
                                     </DialogDescription>
                                 </DialogHeader>
                             </VisuallyHidden>
@@ -70,7 +71,6 @@ defineProps<{ courses: Course[] }>();
                             />
                         </DialogContent>
                     </Dialog>
-
 
                     <!-- Create Course Button -->
                     <Dialog>
@@ -102,6 +102,19 @@ defineProps<{ courses: Course[] }>();
                             />
                         </DialogContent>
                     </Dialog>
+
+                    <!-- Create from Template Button -->
+                    <Link
+                        :href="route('organisation.course.template.index')"
+                        v-if="
+                            $page.props.auth.user.organisation_id &&
+                            $page.props.auth.user.role === 'ADMIN'
+                        "
+                    >
+                        <Button size="sm" variant="outline">
+                            Create from Template
+                        </Button>
+                    </Link>
                 </div>
             </div>
         </header>
@@ -123,7 +136,7 @@ defineProps<{ courses: Course[] }>();
                             $page.props.auth.user.role !== 'ADMIN'
                         "
                     >
-                        <li v-for="course in courses">
+                        <li v-for="course in courses" :key="course.id">
                             <CourseCard :course="course" />
                         </li>
                         <li v-if="courses.length === 0" class="text-center">
@@ -133,6 +146,6 @@ defineProps<{ courses: Course[] }>();
                 </div>
             </div>
         </div>
-
     </AuthenticatedLayout>
 </template>
+

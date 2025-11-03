@@ -19,5 +19,9 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Add this line to seed the course templates
+        $this->call(CourseTemplateSeeder::class);
     }
 }
+

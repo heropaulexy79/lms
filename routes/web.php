@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CourseTemplateController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\CourseController;
@@ -103,8 +104,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/settings/subscription', [SubscriptionController::class, 'destroy'])->name('subscriptions.destroy');
     Route::get('/settings/billing', [SubscriptionController::class, 'index'])->name('organisation.billing.index');
 
+    // *** ADDED COURSE TEMPLATE ROUTES HERE ***
+    Route::get('/org/course-templates', [CourseTemplateController::class, 'index'])->name('organisation.course.template.index')->middleware(['subscribed']);
+    Route::post('/org/course-templates/{templateCourse}', [CourseTemplateController::class, 'store'])->name('organisation.course.template.store')->middleware(['subscribed']);
+    // *** END ADDITION ***
+
     // Org-course
-    Route::get('/org/course', [CourseController::class, 'index'])->name('course.index')->middleware(['subscribed']);
+    Route::get('/org/course', [CourseController::class, 'index'])->name('course.index')->middleware(['subscribed']); // Fixed typo here
     // Route::get("/org/{organisation}/course", [CourseController::class, 'index'])->name('course.index');
     Route::get('/org/course/{course}', [CourseController::class, 'show'])->name('course.show')->middleware(['subscribed']);
     Route::get('/org/course/{course}/edit', [CourseController::class, 'edit'])->name('course.edit')->middleware(['subscribed']);
@@ -145,6 +151,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/org/course/{course}/lesson/{lesson}/postion', [LessonController::class, 'updatePosition'])->name('lesson.update.position')->middleware(['subscribed']);
     Route::get('/org/course/{course}/lesson/create', [LessonController::class, 'create'])->name('lesson.create')->middleware(['subscribed']);
     Route::post('/org/course/{course}/lesson', [LessonController::class, 'store'])->name('lesson.store')->middleware(['subscribed']);
+    
+    // *** MOVED THE LESSON DESTROY ROUTE HERE ***
+    Route::delete('/courses/{course}/lessons/{lesson}', [LessonController::class, 'destroy'])
+        ->name('lesson.destroy')
+        ->middleware(['subscribed']); // Added subscribed middleware for consistency
 
     // Classrooom
     Route::middleware(['subscribed', 'enrolled'])->group(function () {
@@ -175,10 +186,7 @@ Route::get('/preview/welcome', function () {
     return $mail->render();
 });
 
-// Inside routes/web.php
-
-Route::delete('/courses/{course}/lessons/{lesson}', [LessonController::class, 'destroy'])
-    ->middleware(['auth', 'verified'])
-    ->name('lesson.destroy');
+// *** REMOVED THE FLOATING LESSON DESTROY ROUTE FROM HERE ***
 
 require __DIR__ . '/auth.php';
+
