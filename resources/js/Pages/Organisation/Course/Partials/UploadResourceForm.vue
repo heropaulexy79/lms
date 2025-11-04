@@ -14,7 +14,7 @@ const props = defineProps<{
     courses: Array<{
         id: number;
         title: string;
-    }>;
+    }>
 }>();
 
 const emit = defineEmits<{
@@ -24,7 +24,8 @@ const emit = defineEmits<{
 // Form state
 const form = useForm({
     title: '',
-    course_id: null as number | null,
+    // Use string here because Select modelValue expects a string (undefined when not selected)
+    course_id: undefined as string | undefined,
     file: null as File | null,
     text: '',
 });
@@ -41,9 +42,9 @@ const hasContent = computed(() => {
 });
 
 const canSubmit = computed(() => {
-    return form.title.trim().length > 0 && 
-           form.course_id !== null && 
-           hasContent.value && 
+    return form.title.trim().length > 0 &&
+           form.course_id !== undefined &&
+           hasContent.value &&
            !isUploading.value;
 });
 
@@ -53,7 +54,7 @@ function handleFileSelect(event: Event) {
     if (target.files && target.files[0]) {
         selectedFile.value = target.files[0];
         form.file = target.files[0];
-        
+
         // Auto-fill title if not set
         if (!form.title) {
             form.title = selectedFile.value.name.replace(/\.[^/.]+$/, ''); // Remove extension
@@ -84,7 +85,8 @@ async function submitForm() {
     try {
         const formData = new FormData();
         formData.append('title', form.title);
-        formData.append('course_id', form.course_id!.toString());
+        // course_id is a string (id), so append directly
+        formData.append('course_id', form.course_id!);
 
         if (inputType.value === 'file' && selectedFile.value) {
             formData.append('file', selectedFile.value);
@@ -109,26 +111,26 @@ async function submitForm() {
             selectedFile.value = null;
             inputType.value = 'file';
             uploadProgress.value = 0;
-            
+
             // Emit success event
             emit('success');
-            
+
             // Show success message (you can add a toast notification here)
-            alert(`Resource "${form.title}" uploaded and processed successfully!`);
+            alert(`Resource \"${form.title}\" uploaded and processed successfully!`);
         } else {
             throw new Error(response.data.message || 'Upload failed');
         }
 
     } catch (error: any) {
         console.error('Upload error:', error);
-        
+
         let errorMessage = 'Failed to upload resource';
         if (error.response?.data?.message) {
             errorMessage = error.response.data.message;
         } else if (error.message) {
             errorMessage = error.message;
         }
-        
+
         alert(errorMessage);
     } finally {
         isUploading.value = false;
@@ -182,7 +184,7 @@ function formatFileSize(bytes: number): string {
                         <SelectItem 
                             v-for="course in courses" 
                             :key="course.id" 
-                            :value="course.id"
+                            :value="String(course.id)"
                         >
                             {{ course.title }}
                         </SelectItem>
@@ -303,4 +305,3 @@ function formatFileSize(bytes: number): string {
         </div>
     </div>
 </template>
-
