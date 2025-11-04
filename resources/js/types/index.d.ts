@@ -1,4 +1,4 @@
-// import { Question } from "@/Pages/Organisation/Course/Lesson/Partials/use-quiz-manager";
+// NOTE: Extended question types so UI checks in QuizRenderer.vue are valid.
 
 export interface User {
     id: number;
@@ -103,21 +103,51 @@ export interface Lesson {
 }
 
 // This block is for the OLD JSON-based quiz builder
-export type Question = SingleChoice | MultipleChoice;
+export type Question =
+    | SingleChoice
+    | MultipleChoice
+    | MultipleSelect
+    | TrueFalse
+    | TypeAnswer;
 
 type MultipleChoice = {
     id: string;
     text: string;
     type: "multiple_choice";
     options: Array<QuestionOption>;
-    correct_option: string[];
+    correct_option: string[]; // array of option ids
 };
+
+type MultipleSelect = {
+    id: string;
+    text: string;
+    type: "multiple_select";
+    options: Array<QuestionOption>;
+    correct_option: string[]; // array of option ids
+};
+
 type SingleChoice = {
     id: string;
     text: string;
     type: "single_choice";
     options: Array<QuestionOption>;
-    correct_option: string;
+    correct_option: string; // single option id
+};
+
+type TrueFalse = {
+    id: string;
+    text: string;
+    type: "true_false";
+    options: Array<QuestionOption>;
+    correct_option: string; // option id for true/false
+};
+
+type TypeAnswer = {
+    id: string;
+    text: string;
+    type: "type_answer";
+    options?: Array<QuestionOption>; // optional; free text expected
+    correct_option?: string | string[]; // optional, backend may provide acceptable answers
 };
 
 type QuestionOption = {

@@ -11,8 +11,8 @@ export function useQuizManager(initialQuestions?: Question[]) {
             text: "",
             type: "single_choice",
             options: [
-                { id: generateId(), text: "" },
-                { id: generateId(), text: "" },
+                { id: generateId(), text: "", is_correct: false },
+                { id: generateId(), text: "", is_correct: false },
             ],
         } as Question);
     };
@@ -22,14 +22,25 @@ export function useQuizManager(initialQuestions?: Question[]) {
     };
 
     const addOption = (questionIndex: number) => {
-        questions.value[questionIndex].options.push({
-            id: generateId(),
-            text: "",
-        });
+        // Include is_correct by default (fixes TS error where is_correct required)
+        const question = questions.value[questionIndex];
+
+        // Check if both question and question.options exist
+        if (question?.options) {
+            question.options.push({
+                id: generateId(),
+                text: "",
+                is_correct: false,
+            } as any);
+        }
     };
 
     const deleteOption = (questionIndex: number, optionIndex: number) => {
-        questions.value[questionIndex].options.splice(optionIndex, 1);
+        const question = questions.value[questionIndex];
+        
+        if (question?.options) {
+            question.options.splice(optionIndex, 1);
+        }
     };
 
     return {
@@ -40,3 +51,4 @@ export function useQuizManager(initialQuestions?: Question[]) {
         deleteOption,
     };
 }
+

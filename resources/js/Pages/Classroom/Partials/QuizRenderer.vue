@@ -98,10 +98,11 @@ const correctOption = computed(() => {
 
     const n = currentQuesion.value;
 
-    const r = n.options.find(
+    // Use optional chaining: options may be undefined for some question types
+    const r = n.options?.find(
         // @ts-ignore
         (r) => r.id === n.correct_option,
-    );
+    ) ?? null;
 
     return r;
 });
@@ -246,59 +247,28 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
         </Card>
         <Card class="mx-auto w-full max-w-screen-md rounded-md">
             <CardHeader>
-                <!-- <div class="mb-6 flex items-center justify-end gap-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        @click="successDialog = true"
-                        v-if="isCompleted"
-                    >
-                        Show Previous Results
-                    </Button>
-
-                    <Progress
-                        :model-value="
-                            lesson.content_json && lesson.content_json.length > 0
-                                ? ((currentQuestionIdx + 1) / lesson.content_json.length) * 100
-                                : 0
-                        "
-                        class="h-3"
-                    />
-                    <span class="flex-shrink-0">
-                        {{ currentQuestionIdx + 1 }} /
-                        {{ lesson.content_json?.length || 0 }}
-                    </span>
-                </div> -->
                 <CardTitle class="mb-6 max-w-screen-sm text-lg font-bold">
                     {{ currentQuesion.text }}
                 </CardTitle>
             </CardHeader>
             <CardContent class="">
                 <div class="relative">
-                    <!-- <div class="my-6">
-            You scored {{ score }} / {{ lesson.content_json.length }}
-        </div> -->
-
-                    <!-- <CardTitle class="mb-6 max-w-screen-sm text-lg font-bold">
-                        {{ currentQuesion.text }}
-                    </CardTitle> -->
-
                     <div class="">
                         <!-- Kahoot-style colored tiles for single choice -->
                         <div 
                             v-if="currentQuesion.type === 'single_choice'"
                             :class="cn(
                                 'gap-4 max-w-4xl mx-auto',
-                                currentQuesion.options.length <= 2 ? 'grid grid-cols-2' : '',
-                                currentQuesion.options.length === 3 ? 'grid grid-cols-3' : '',
-                                currentQuesion.options.length === 4 ? 'grid grid-cols-2' : '',
-                                currentQuesion.options.length === 5 ? 'grid grid-cols-3' : '',
-                                currentQuesion.options.length === 6 ? 'grid grid-cols-3' : '',
-                                currentQuesion.options.length >= 7 ? 'grid grid-cols-4' : ''
+                                (currentQuesion.options ?? []).length <= 2 ? 'grid grid-cols-2' : '',
+                                (currentQuesion.options ?? []).length === 3 ? 'grid grid-cols-3' : '',
+                                (currentQuesion.options ?? []).length === 4 ? 'grid grid-cols-2' : '',
+                                (currentQuesion.options ?? []).length === 5 ? 'grid grid-cols-3' : '',
+                                (currentQuesion.options ?? []).length === 6 ? 'grid grid-cols-3' : '',
+                                (currentQuesion.options ?? []).length >= 7 ? 'grid grid-cols-4' : ''
                             )"
                         >
                             <div
-                                v-for="(option, index) in currentQuesion.options"
+                                v-for="(option, index) in currentQuesion.options ?? []"
                                 :key="option.id"
                                 class="relative group cursor-pointer"
                                 @click="!isQuizLocked && answerQuestion(currentQuesion.id, option.id)"
@@ -349,7 +319,7 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
                                         class="absolute bottom-2 right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center"
                                     >
                                         <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                         </svg>
                                     </div>
                                 </div>
@@ -379,16 +349,16 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
                             v-else-if="currentQuesion.type === 'multiple_select'" 
                             :class="cn(
                                 'gap-4 max-w-4xl mx-auto',
-                                currentQuesion.options.length <= 2 ? 'grid grid-cols-2' : '',
-                                currentQuesion.options.length === 3 ? 'grid grid-cols-3' : '',
-                                currentQuesion.options.length === 4 ? 'grid grid-cols-2' : '',
-                                currentQuesion.options.length === 5 ? 'grid grid-cols-3' : '',
-                                currentQuesion.options.length === 6 ? 'grid grid-cols-3' : '',
-                                currentQuesion.options.length >= 7 ? 'grid grid-cols-4' : ''
+                                (currentQuesion.options ?? []).length <= 2 ? 'grid grid-cols-2' : '',
+                                (currentQuesion.options ?? []).length === 3 ? 'grid grid-cols-3' : '',
+                                (currentQuesion.options ?? []).length === 4 ? 'grid grid-cols-2' : '',
+                                (currentQuesion.options ?? []).length === 5 ? 'grid grid-cols-3' : '',
+                                (currentQuesion.options ?? []).length === 6 ? 'grid grid-cols-3' : '',
+                                (currentQuesion.options ?? []).length >= 7 ? 'grid grid-cols-4' : ''
                             )"
                         >
                             <div
-                                v-for="(option, index) in currentQuesion.options"
+                                v-for="(option, index) in currentQuesion.options ?? []"
                                 :key="option.id"
                                 class="relative group cursor-pointer"
                                 @click="!isQuizLocked && toggleMultiSelect(option.id as string)"
@@ -431,7 +401,7 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
                                         class="absolute top-2 right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center"
                                     >
                                         <svg class="w-4 h-4 text-current" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                         </svg>
                                     </div>
                                     
@@ -441,7 +411,7 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
                                         class="absolute bottom-2 right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center"
                                     >
                                         <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                         </svg>
                                     </div>
                                     
@@ -453,7 +423,7 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
                         <div v-if="currentQuesion.type === 'multiple_select' && multiSelected.length > 0" class="text-center mt-4">
                             <div class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
                                 <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                 </svg>
                                 {{ multiSelected.length }} option{{ multiSelected.length !== 1 ? 's' : '' }} selected
                             </div>
@@ -536,20 +506,11 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
 
         <div>
             <Dialog v-model:open="successDialog">
-                <!-- <DialogTrigger as-child>
-      <Button variant="outline">
-        Edit Profile
-      </Button>
-    </DialogTrigger> -->
                 <DialogContent class="sm:max-w-[575px]">
                     <DialogHeader>
                         <DialogTitle class="text-center">
                             {{ isCompleted ? 'Quiz Results' : 'Quiz Completed!' }}
                         </DialogTitle>
-                        <!-- <DialogDescription>
-                        Make changes to your profile here. Click save when
-                        you're done.
-                    </DialogDescription> -->
                     </DialogHeader>
                     <div class="text-center">
                         <div
@@ -564,10 +525,6 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
                                 {{ scoreInPercent ?? 0 }} %
                             </span>
                         </div>
-
-                        <!-- <div class="mt-4">
-                        {{ $page.props.flash.message?.message }}
-                    </div> -->
 
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col items-center space-y-2">

@@ -18,48 +18,48 @@ import { generateId } from "./utils";
 import { RichEditor } from "@/Components/RichEditor";
 import { slugify } from "@/lib/utils";
 import { WandSparklesIcon, RefreshCwIcon, CheckIcon } from "lucide-vue-next";
-import axios from 'axios';
+import axios from "axios";
 import { ref } from "vue";
 
 const props = defineProps<{ lesson: Lesson }>();
 
+// --- FORM INITIALIZATION ---
 const form = useForm({
     title: props.lesson.title,
     slug: props.lesson.slug,
     content: props.lesson.content,
     quiz:
-        // *** START FIX ***
-        // 1. Check for AI-generated questions first (props.lesson.questions)
+        // 1️⃣ Prefer AI-generated or existing quiz data
         props.lesson.questions && props.lesson.questions.length > 0
             ? props.lesson.questions
-        // 2. Fallback to old manual quiz builder content (props.lesson.content_json)
-        : props.lesson.content_json &&
-          typeof props.lesson.content_json !== "string"
+            // 2️⃣ Fallback to content_json if available
+            : props.lesson.content_json &&
+              typeof props.lesson.content_json !== "string"
             ? props.lesson.content_json
-        // 3. Fallback to a single empty question (This is what you were seeing)
+            // 3️⃣ Default empty quiz structure
             : [
                   {
                       id: generateId(),
                       text: "",
                       type: "single_choice",
                       options: [
-                          { id: generateId(), text: "" },
-                          { id: generateId(), text: "" },
+                          { id: generateId(), text: "", is_correct: false },
+                          { id: generateId(), text: "", is_correct: false },
                       ],
                   },
               ],
-        // *** END FIX ***
     type: props.lesson.type ?? "DEFAULT",
     is_published: props.lesson.is_published
-        ? props.lesson.is_published + ""
+        ? String(props.lesson.is_published)
         : "false",
 });
 
-// AI Generation state
+// --- STATE ---
 const isGenerating = ref(false);
 const generatedContent = ref("");
 const showGeneratedContent = ref(false);
 
+// --- METHODS ---
 function submit() {
     form.patch(
         route("lesson.update", {
@@ -67,8 +67,8 @@ function submit() {
             lesson: props.lesson.id,
         }),
         {
-            onSuccess() {},
-            onError(error) {},
+            onSuccess: () => {},
+            onError: (error) => console.error("Form submission error:", error),
             preserveScroll: true,
         },
     );
@@ -76,8 +76,6 @@ function submit() {
 
 function updateType(value: string) {
     value = value.toUpperCase();
-    // form.content = "";
-
     if (value === "DEFAULT") {
         form.quiz = [];
     } else {
@@ -91,38 +89,39 @@ function generateSlug() {
 
 async function generateWithAI() {
     if (!form.title.trim()) {
-        alert('Please enter a lesson title first');
+        alert("Please enter a lesson title first");
         return;
     }
-    
+
     isGenerating.value = true;
     showGeneratedContent.value = false;
-    
+
     try {
         const requestData = {
             title: form.title,
             course_id: props.lesson.course_id,
             options: {
                 type: form.type,
-                include_examples: true
-            }
+                include_examples: true,
+            },
         };
-        
-        const response = await axios.post('/api/rag/generate-content', requestData);
-        
+
+        const response = await axios.post("/api/rag/generate-content", requestData);
+
         if (response.data.success) {
-            console.log('Generated content:', response.data.content);
+            console.log("Generated content:", response.data.content);
             generatedContent.value = response.data.content;
             showGeneratedContent.value = true;
         } else {
-            alert('Failed to generate content: ' + response.data.message);
+            alert("Failed to generate content: " + response.data.message);
         }
-    } catch (error) {
-        console.error('Error generating content:', error);
-        if (error.response) {
-            alert('Failed to generate content: ' + (error.response.data.message || 'Server error'));
+    } catch (error: any) {
+        // ✅ Type-safe error handling
+        console.error("Error generating content:", error);
+        if (axios.isAxiosError(error)) {
+            alert("Failed to generate content: " + (error.response?.data?.message || "Server error"));
         } else {
-            alert('Failed to generate content. Please try again.');
+            alert("Failed to generate content. Please try again.");
         }
     } finally {
         isGenerating.value = false;
@@ -146,6 +145,7 @@ function dismissGeneratedContent() {
     generatedContent.value = "";
 }
 </script>
+
 
 <template>
     <form @submit.prevent="submit">

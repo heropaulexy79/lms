@@ -14,11 +14,11 @@ import { Badge } from "@/Components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/Components/ui/card";
 import { Separator } from "@/Components/ui/separator";
 import { Progress } from "@/Components/ui/progress";
-import { 
-    WandSparklesIcon, 
-    RefreshCwIcon, 
-    CheckIcon, 
-    XIcon, 
+import {
+    WandSparklesIcon,
+    RefreshCwIcon,
+    CheckIcon,
+    XIcon,
     BookOpenIcon,
     TrashIcon,
     PlusIcon,
@@ -61,7 +61,7 @@ interface GeneratedQuiz {
     };
 }
 
-const props = defineProps<{ 
+const props = defineProps<{
     course: Course;
     onSuccess?: () => void;
 }>();
@@ -75,7 +75,8 @@ const quizTitle = ref<string>('');
 const quizTypes = ref<string[]>(['MULTIPLE_CHOICE']);
 const quizCount = ref<number>(10);
 const difficulty = ref<string>('medium');
-const isPublished = ref<boolean>(false);
+// Changed to string so it maps to Select's modelValue (string)
+const isPublished = ref<string>('false');
 const selectedResources = ref<string[]>([]);
 
 // Available quiz types
@@ -110,16 +111,16 @@ const filteredResources = computed(() => {
     if (!resourceSearchQuery.value) {
         return courseResources.value;
     }
-    
+
     const query = resourceSearchQuery.value.toLowerCase();
-    return courseResources.value.filter(resource => 
+    return courseResources.value.filter(resource =>
         resource.title.toLowerCase().includes(query) ||
         resource.content.toLowerCase().includes(query)
     );
 });
 
 const selectedResourceDetails = computed(() => {
-    return courseResources.value.filter(resource => 
+    return courseResources.value.filter(resource =>
         selectedResources.value.includes(resource.id)
     );
 });
@@ -152,7 +153,8 @@ async function generateQuizzes() {
             quiz_types: quizTypes.value,
             quiz_count: quizCount.value,
             difficulty: difficulty.value,
-            is_published: isPublished.value,
+            // Convert string back to boolean for backend
+            is_published: isPublished.value === 'true',
             reference_resources: selectedResources.value.length > 0 ? selectedResources.value : undefined
         };
 
@@ -175,15 +177,15 @@ async function generateQuizzes() {
         if (response.data.success) {
             generatedQuizzes.value = response.data.data.quizzes;
             showGeneratedQuizzes.value = true;
-            
+
             // Show success message with lesson info
             const lesson = response.data.data.lesson;
             const status = lesson.is_published ? 'Published' : 'Draft';
             alert(`Successfully created ${status.toLowerCase()} quiz lesson "${lesson.title}" with ${response.data.data.generated_count} questions!`);
-            
+
             // Refresh unassigned quizzes
             await fetchUnassignedQuizzes();
-            
+
             emit('success');
         } else {
             console.error('Quiz generation failed:', response.data);
@@ -400,8 +402,8 @@ onMounted(() => {
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem :value="false">Draft</SelectItem>
-                            <SelectItem :value="true">Published</SelectItem>
+                            <SelectItem value="false">Draft</SelectItem>
+                            <SelectItem value="true">Published</SelectItem>
                         </SelectContent>
                     </Select>
                     <p class="text-xs text-muted-foreground mt-1">
@@ -772,4 +774,3 @@ onMounted(() => {
             </Card>
     </div>
 </template>
-

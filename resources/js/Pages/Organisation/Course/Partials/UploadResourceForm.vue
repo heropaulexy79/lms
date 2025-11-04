@@ -36,6 +36,13 @@ const selectedFile = ref<File | null>(null);
 const inputType = ref<'file' | 'text'>('file');
 
 // Computed
+const courseIdString = computed({
+    get: () => form.course_id?.toString(),
+    set: (val) => {
+        form.course_id = val ? Number(val) : null;
+    }
+});
+
 const hasContent = computed(() => {
     return (selectedFile.value !== null) || (form.text.trim().length > 0);
 });
@@ -174,7 +181,8 @@ function formatFileSize(bytes: number): string {
             <!-- Course Selection -->
             <div>
                 <Label for="course_id">Course *</Label>
-                <Select v-model:model-value="form.course_id" :disabled="isUploading">
+                <!-- Use the computed string value for v-model -->
+                <Select v-model:model-value="courseIdString" :disabled="isUploading">
                     <SelectTrigger class="mt-2">
                         <SelectValue placeholder="Select a course" />
                     </SelectTrigger>
@@ -182,7 +190,7 @@ function formatFileSize(bytes: number): string {
                         <SelectItem 
                             v-for="course in courses" 
                             :key="course.id" 
-                            :value="course.id"
+                            :value="course.id.toString()"
                         >
                             {{ course.title }}
                         </SelectItem>
