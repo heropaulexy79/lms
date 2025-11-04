@@ -24,8 +24,7 @@ const emit = defineEmits<{
 // Form state
 const form = useForm({
     title: '',
-    // Use string here because Select modelValue expects a string (undefined when not selected)
-    course_id: undefined as string | undefined,
+    course_id: undefined as number | undefined, // <-- change this
     file: null as File | null,
     text: '',
 });
@@ -40,8 +39,8 @@ const inputType = ref<'file' | 'text'>('file');
 const courseIdString = computed({
     get: () => form.course_id?.toString(),
     set: (val) => {
-        form.course_id = val ? Number(val) : null;
-    }
+        form.course_id = val ? Number(val) : undefined; // consistent types
+    },
 });
 
 const hasContent = computed(() => {
@@ -93,7 +92,8 @@ async function submitForm() {
         const formData = new FormData();
         formData.append('title', form.title);
         // course_id is a string (id), so append directly
-        formData.append('course_id', form.course_id!);
+        formData.append('course_id', String(form.course_id));
+
 
         if (inputType.value === 'file' && selectedFile.value) {
             formData.append('file', selectedFile.value);
@@ -192,11 +192,7 @@ function formatFileSize(bytes: number): string {
                         <SelectItem 
                             v-for="course in courses" 
                             :key="course.id" 
-<<<<<<< HEAD
                             :value="course.id.toString()"
-=======
-                            :value="String(course.id)"
->>>>>>> 72feaf0270cea0462cf8b3d75e66afecbf5fb8de
                         >
                             {{ course.title }}
                         </SelectItem>
