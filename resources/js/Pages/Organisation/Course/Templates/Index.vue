@@ -13,10 +13,6 @@ defineProps<{
 <template>
     <Head title="Create Course from Template" />
 
-    <!-- 
-        FIX 1: Added the required :is-fullscreen="false" prop to the layout.
-        This will resolve the "Missing required prop" warning.
-    -->
     <AuthenticatedLayout :is-fullscreen="false">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -48,20 +44,42 @@ defineProps<{
                             :course="template"
                             class="flex-grow"
                         />
-                        <!-- Add the "Use Template" button -->
-                        <Link
-                            :href="
-                                route(
-                                    'organisation.course.template.store',
-                                    template.id
-                                )
-                            "
-                            method="post"
-                            as="button"
-                            class="mt-4 w-full"
-                        >
-                            <Button class="w-full">Use this template</Button>
-                        </Link>
+
+                        <!-- *** START FIX: Added Preview Button *** -->
+                        <!-- Button container -->
+                        <div class="mt-4 grid grid-cols-2 gap-3">
+                            <!-- Preview Button -->
+                            <Link
+                                :href="
+                                    route(
+                                        'organisation.course.template.show',
+                                        template.id
+                                    )
+                                "
+                                as="button"
+                                class="w-full"
+                            >
+                                <Button variant="outline" class="w-full"
+                                    >Preview</Button
+                                >
+                            </Link>
+
+                            <!-- Use Template Button -->
+                            <Link
+                                :href="
+                                    route(
+                                        'organisation.course.template.store',
+                                        template.id
+                                    )
+                                "
+                                method="post"
+                                as="button"
+                                class="w-full"
+                            >
+                                <Button class="w-full">Use this template</Button>
+                            </Link>
+                        </div>
+                        <!-- *** END FIX *** -->
                     </div>
                 </div>
                 <div v-else>
@@ -71,11 +89,6 @@ defineProps<{
                 </div>
 
                 <div class="mt-12 text-center">
-                    <!-- 
-                        FIX 3: Changed route from 'organisation.course.index' 
-                        to 'course.index' to match your routes/web.php file.
-                        This will resolve the Ziggy route error.
-                    -->
                     <Link :href="route('course.index')">
                         <Button variant="outline"
                             >Or go back to course list</Button
