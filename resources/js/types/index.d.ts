@@ -75,7 +75,7 @@ export interface Course {
     deleted_at: Date | null;
     updated_at: Date | null;
 
-    // ADDED FOR COURSE TEMPLATE PREVIEW
+    // Added for template preview
     lessons?: Lesson[];
 }
 
@@ -84,7 +84,7 @@ export interface Lesson {
     title: string;
     slug: string;
     content: string;
-    content_json: Question[];
+    content_json: Question[]; // This is for the OLD quiz builder
     course_id: Course["id"];
     type: "DEFAULT" | "QUIZ" | (string & {});
 
@@ -93,10 +93,16 @@ export interface Lesson {
     created_at: Date;
     deleted_at: Date | null;
 
-    // ADDED FOR COURSE TEMPLATE PREVIEW
+    // Added for template preview (DB-driven quiz)
     questions?: QuizQuestion[];
+
+    // Added for classroom quiz renderer
+    user_lesson_data?: {
+        score?: number;
+    };
 }
 
+// This block is for the OLD JSON-based quiz builder
 export type Question = SingleChoice | MultipleChoice;
 
 type MultipleChoice = {
@@ -117,7 +123,10 @@ type SingleChoice = {
 type QuestionOption = {
     id: string;
     text: string;
+    // *** FIX: Added this to solve build errors in QuizRenderer.vue ***
+    is_correct: boolean;
 };
+// End OLD quiz builder types
 
 export type Paginated<T> = {
     current_page: number;
@@ -214,12 +223,12 @@ export interface Group {
     deleted_at: Date | null;
 }
 
-// ADDED FOR COURSE TEMPLATE PREVIEW (DATABASE-DRIVEN QUIZZES)
+// This block is for the NEW Database-driven quiz (used in Template Preview)
 export interface QuizQuestion {
     id: number;
     lesson_id: number;
     question: string;
-    type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | (string & {});
+    type: string;
     position: number;
     options: QuizOption[];
 }
@@ -229,4 +238,6 @@ export interface QuizOption {
     quiz_question_id: number;
     option_text: string;
     is_correct: boolean;
+    position: number;
 }
+// End NEW quiz types

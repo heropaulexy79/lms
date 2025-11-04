@@ -51,6 +51,8 @@ const form = useForm({
 const isGenerating = ref(false);
 const generatedContent = ref("");
 const showGeneratedContent = ref(false);
+// *** ADDED THIS ***
+const errorMessage = ref("");
 
 // Resource selection state
 const courseResources = ref<Array<{
@@ -104,12 +106,13 @@ function generateSlug() {
 
 async function generateWithAI() {
     if (!form.title.trim()) {
-        alert('Please enter a lesson title first');
+        errorMessage.value = "Please enter a lesson title first."; // Use error message state
         return;
     }
     
     isGenerating.value = true;
     showGeneratedContent.value = false;
+    errorMessage.value = ""; // Clear previous error
     
     // Debug logging
     console.log('Course object:', props.course);
@@ -144,20 +147,24 @@ async function generateWithAI() {
             generatedContent.value = response.data.content;
             showGeneratedContent.value = true;
         } else {
-            alert('Failed to generate content: ' + response.data.message);
+            errorMessage.value = "Failed to generate content: " + response.data.message;
         }
     } catch (error) {
-        console.error('Error generating content:', error);
-        if (error.response) {
+        // *** FIX: Cast error to 'any' to access 'response' and 'request' properties ***
+        const err = error as any;
+        console.error('Error generating content:', err);
+        if (err.response) {
             // Server responded with error status
-            console.error('Error response:', error.response.data);
-            alert('Failed to generate content: ' + (error.response.data.message || 'Server error'));
-        } else if (error.request) {
+            console.error('Error response:', err.response.data);
+            errorMessage.value = 'Failed to generate content: ' + (err.response.data.message || 'Server error');
+        } else if (err.request) {
             // Request was made but no response received
-            alert('Failed to generate content. Please check your internet connection and try again.');
+             console.error("Error request:", err.request);
+            errorMessage.value = 'Failed to generate content. Please check your internet connection and try again.';
         } else {
             // Something else happened
-            alert('Failed to generate content. Please try again.');
+            console.error("Error", err.message);
+            errorMessage.value = 'Failed to generate content. Please try again.';
         }
     } finally {
         isGenerating.value = false;
@@ -421,6 +428,11 @@ onMounted(() => {
                                     {{ isGenerating ? 'Generating...' : 'Generate with AI' }}
                                 </Button>
                             </div>
+
+                            <!-- *** ADDED ERROR MESSAGE DISPLAY *** -->
+                            <div v-if="errorMessage" class="mb-4 text-red-600 text-sm">
+                                {{ errorMessage }}
+                            </div>
                             
                             <!-- Generated content preview -->
                             <div v-if="showGeneratedContent && generatedContent" class="mb-4 p-4 border rounded-lg bg-muted/50">
@@ -529,3 +541,4 @@ onMounted(() => {
         </div>
     </form>
 </template>
+

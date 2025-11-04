@@ -596,9 +596,9 @@ const incorrectCount = computed(() => totalQuestions.value - correctCount.value)
                         </div>
                         
                         <!-- Show previous score message for completed quizzes -->
-                        <div v-if="isCompleted && props.lesson.score" class="mt-4 p-3 bg-blue-50 rounded-lg">
+                        <div v-if="isCompleted && props.lesson.user_lesson_data?.score" class="mt-4 p-3 bg-blue-50 rounded-lg">
                             <div class="text-sm text-blue-800">
-                                <strong>Previous Score:</strong> {{ Math.round(props.lesson.score) }}%
+                                <strong>Previous Score:</strong> {{ Math.round(props.lesson.user_lesson_data?.score) }}%
                             </div>
                         </div>
                     </div>

@@ -190,13 +190,14 @@ async function generateQuizzes() {
             alert('Failed to generate quizzes: ' + response.data.message);
         }
     } catch (error) {
-        console.error('Error generating quizzes:', error);
-        if (error.response) {
-            console.error('Error response:', error.response.data);
-            console.error('Error status:', error.response.status);
-            alert('Failed to generate quizzes: ' + (error.response.data.message || 'Server error'));
+        const err = error as any; // Cast error to any
+        console.error('Error generating quizzes:', err);
+        if (err.response) {
+            console.error('Error response:', err.response.data);
+            console.error('Error status:', err.response.status);
+            alert('Failed to generate quizzes: ' + (err.response.data.message || 'Server error'));
         } else {
-            console.error('Request error:', error.message);
+            console.error('Request error:', err.message);
             alert('Failed to generate quizzes. Please try again.');
         }
     } finally {
@@ -213,7 +214,8 @@ async function fetchCourseResources() {
             courseResources.value = response.data.data;
         }
     } catch (error) {
-        console.error('Failed to fetch course resources:', error);
+        const err = error as any; // Cast error to any
+        console.error('Failed to fetch course resources:', err);
     } finally {
         isLoadingResources.value = false;
     }
@@ -227,7 +229,8 @@ async function fetchUnassignedQuizzes() {
             unassignedQuizzes.value = response.data.data;
         }
     } catch (error) {
-        console.error('Failed to fetch unassigned quizzes:', error);
+        const err = error as any; // Cast error to any
+        console.error('Failed to fetch unassigned quizzes:', err);
     } finally {
         isLoadingUnassigned.value = false;
     }
@@ -276,7 +279,8 @@ async function deleteQuizQuestion(questionId: number) {
             alert('Failed to delete quiz question: ' + response.data.message);
         }
     } catch (error) {
-        console.error('Error deleting quiz question:', error);
+        const err = error as any; // Cast error to any
+        console.error('Error deleting quiz question:', err);
         alert('Failed to delete quiz question. Please try again.');
     }
 }
@@ -305,7 +309,8 @@ async function checkCourseContent() {
             courseContentInfo.value = response.data.data;
         }
     } catch (error) {
-        console.error('Failed to check course content:', error);
+        const err = error as any; // Cast error to any
+        console.error('Failed to check course content:', err);
     } finally {
         isLoadingContentCheck.value = false;
     }
@@ -664,7 +669,7 @@ onMounted(() => {
                                         <Badge variant="secondary">{{ quiz.type.replace('_', ' ') }}</Badge>
                                         <Badge 
                                             :variant="quiz.metadata.difficulty === 'easy' ? 'default' : 
-                                                     quiz.metadata.difficulty === 'medium' ? 'secondary' : 'destructive'"
+                                                      quiz.metadata.difficulty === 'medium' ? 'secondary' : 'destructive'"
                                         >
                                             {{ quiz.metadata.difficulty }}
                                         </Badge>
@@ -745,7 +750,7 @@ onMounted(() => {
                                     <Badge variant="secondary">{{ quiz.type.replace('_', ' ') }}</Badge>
                                     <Badge 
                                         :variant="quiz.metadata.difficulty === 'easy' ? 'default' : 
-                                                 quiz.metadata.difficulty === 'medium' ? 'secondary' : 'destructive'"
+                                                  quiz.metadata.difficulty === 'medium' ? 'secondary' : 'destructive'"
                                     >
                                         {{ quiz.metadata.difficulty }}
                                     </Badge>
@@ -767,3 +772,4 @@ onMounted(() => {
             </Card>
     </div>
 </template>
+
