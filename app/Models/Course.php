@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Str; // Import the Str class
+use Illuminate\Support\Str;
 
 class Course extends Model
 {
@@ -19,8 +19,8 @@ class Course extends Model
         'teacher_id',
         'is_published',
         'banner_image',
-        'organisation_id', // Make sure this is fillable
-        'is_template',     // Make sure this is fillable
+        'organisation_id', 
+        'is_template',    
     ];
 
     protected $casts = [
@@ -60,10 +60,6 @@ class Course extends Model
         return $this->hasMany(CourseEnrollment::class);
     }
 
-    /**
-     * Generate a unique slug for a new course.
-     * We pass $organisationId to keep the signature, but we check globally.
-     */
     public static function generateUniqueSlug(string $title, ?int $organisationId): string
     {
         $slug = Str::slug($title);

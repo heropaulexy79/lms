@@ -45,10 +45,7 @@ defineProps<{
                             class="flex-grow"
                         />
 
-                        <!-- *** START FIX: Added Preview Button *** -->
-                        <!-- Button container -->
                         <div class="mt-4 grid grid-cols-2 gap-3">
-                            <!-- Preview Button -->
                             <Link
                                 :href="
                                     route(
@@ -64,7 +61,6 @@ defineProps<{
                                 >
                             </Link>
 
-                            <!-- Use Template Button -->
                             <Link
                                 :href="
                                     route(
@@ -79,7 +75,6 @@ defineProps<{
                                 <Button class="w-full">Use this template</Button>
                             </Link>
                         </div>
-                        <!-- *** END FIX *** -->
                     </div>
                 </div>
                 <div v-else>

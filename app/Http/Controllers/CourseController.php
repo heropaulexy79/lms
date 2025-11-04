@@ -14,8 +14,6 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
-
-        // TODO: Make a public route ?
         $user = $request->user();
         $organisation = $user->organisation();
 

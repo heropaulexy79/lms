@@ -21,16 +21,8 @@ class QuizOption extends Model
         'is_correct' => 'boolean',
     ];
 
-    // *** START FIX ***
-    /**
-     * Appends the 'text' attribute to array/JSON versions of the model.
-     */
     protected $appends = ['text'];
 
-    /**
-     * Accessor to map the 'option_text' column to a 'text' attribute.
-     * This is what the frontend expects.
-     */
     public function getTextAttribute()
     {
         return $this->option_text;

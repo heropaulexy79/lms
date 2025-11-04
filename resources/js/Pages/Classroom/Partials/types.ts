@@ -3,7 +3,7 @@ import { Lesson } from "@/types";
 export type QuestionOption = {
     id: string;
     text: string;
-    is_correct?: boolean; // Make is_correct optional as it's not always present
+    is_correct?: boolean;
 };
 
 export type BaseQuestion = {

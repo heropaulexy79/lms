@@ -43,7 +43,6 @@ const getLessonIcon = (type: string) => {
                         {{ template.title }}
                     </h2>
                 </div>
-                <!-- ADDED BUTTONS HERE -->
                 <div class="flex items-center space-x-3">
                     <Link :href="route('organisation.course.template.index')">
                         <Button variant="outline">Go Back</Button>
@@ -61,7 +60,6 @@ const getLessonIcon = (type: string) => {
                         <Button>Use this template</Button>
                     </Link>
                 </div>
-                <!-- END ADDED BUTTONS -->
             </div>
         </template>
 
@@ -206,7 +204,7 @@ const getLessonIcon = (type: string) => {
                 </div>
             </div>
         </div>
-        <!-- ✅ Bottom Action Buttons -->
+
 <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-10">
     <div class="bg-white shadow-sm sm:rounded-lg p-6 flex justify-end space-x-3">
         <Link :href="route('organisation.course.template.index')">

@@ -55,9 +55,7 @@ class QuizAttempt extends Model
         return $this->belongsTo(Lesson::class);
     }
 
-    /**
-     * Get the user that owns the quiz attempt.
-     */
+   
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -71,9 +69,6 @@ class QuizAttempt extends Model
         return $this->hasMany(QuizAnswer::class);
     }
 
-    /**
-     * Get the quiz questions for this attempt's lesson.
-     */
     public function questions(): HasMany
     {
         return $this->hasMany(QuizQuestion::class, 'lesson_id', 'lesson_id');
