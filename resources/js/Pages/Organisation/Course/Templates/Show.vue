@@ -206,6 +206,22 @@ const getLessonIcon = (type: string) => {
                 </div>
             </div>
         </div>
+        <!-- ✅ Bottom Action Buttons -->
+<div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-10">
+    <div class="bg-white shadow-sm sm:rounded-lg p-6 flex justify-end space-x-3">
+        <Link :href="route('organisation.course.template.index')">
+            <Button variant="outline">Go Back</Button>
+        </Link>
+        <Link
+            :href="route('organisation.course.template.store', template.id)"
+            method="post"
+            as="button"
+        >
+            <Button>Use this template</Button>
+        </Link>
+    </div>
+</div>
+
     </AuthenticatedLayout>
 </template>
 

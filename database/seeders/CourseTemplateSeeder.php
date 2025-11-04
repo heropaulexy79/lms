@@ -23,9 +23,9 @@ class CourseTemplateSeeder extends Seeder
             [ // If not, create it
                 'title' => 'Employee Onboarding Template',
                 'description' => 'A comprehensive, generic onboarding course for new employees. Copy this to your account and edit to fit your company\'s specific needs.',
-                'organisation_id' => null, // Belongs to no one
+                'organisation_id' => null, 
                 'is_template' => true,
-                'is_published' => true, // Published so it appears in the gallery
+                'is_published' => true,
             ]
         );
 
@@ -263,6 +263,287 @@ class CourseTemplateSeeder extends Seeder
                 ['option_text' => 'Ask a stranger to watch your laptop while you get your coffee.', 'is_correct' => false],
             ]);
         }
+        // ================================================
+//  NEW TEMPLATE COURSE: Professional Excellence
+// ================================================
+$proCourse = Course::firstOrCreate(
+    ['slug' => 'professional-excellence-template'],
+    [
+        'title' => 'Professional Excellence & Workplace Effectiveness',
+        'description' => 'A cross-industry professional development course designed to equip employees with timeless soft skills — communication, teamwork, emotional intelligence, and problem-solving — to excel in any organization.',
+        'organisation_id' => null,
+        'is_template' => true,
+        'is_published' => true,
+    ]
+);
+
+// 1. LESSON: Introduction to Professional Excellence
+$lesson1 = $proCourse->lessons()->firstOrCreate(
+    ['slug' => 'pro-introduction'],
+    [
+        'title' => 'Introduction to Professional Excellence',
+        'type' => Lesson::TYPE_DEFAULT,
+        'content' => '
+<h1>Welcome to Professional Excellence</h1>
+<p>This course is designed to help you master the habits, skills, and mindset required to thrive in any professional environment. Whether you’re in tech, healthcare, finance, education, or the public sector, excellence is a universal language.</p>
+
+<h2>Why This Course Matters</h2>
+<ul>
+    <li>Organizations thrive when individuals take ownership of excellence.</li>
+    <li>Soft skills are now <strong>power skills</strong> — they determine how far your technical competence will go.</li>
+    <li>This course gives you principles that make you indispensable in any team or workplace.</li>
+</ul>
+
+<h2>Course Modules</h2>
+<ul>
+    <li>Effective Communication</li>
+    <li>Emotional Intelligence</li>
+    <li>Teamwork and Collaboration</li>
+    <li>Critical Thinking and Problem-Solving</li>
+    <li>Personal Productivity and Time Management</li>
+    <li>Continuous Growth Mindset</li>
+</ul>
+
+<p>Let’s begin your journey toward workplace mastery and long-term impact.</p>',
+        'is_published' => true,
+        'position' => 1,
+    ]
+);
+
+// 2. LESSON: Effective Communication
+$lesson2 = $proCourse->lessons()->firstOrCreate(
+    ['slug' => 'pro-communication'],
+    [
+        'title' => 'Effective Communication in the Workplace',
+        'type' => Lesson::TYPE_DEFAULT,
+        'content' => '
+<h1>Effective Communication in the Workplace</h1>
+<p>Communication is the foundation of every relationship — personal or professional. In the workplace, it determines productivity, trust, and clarity.</p>
+
+<h2>Key Principles</h2>
+<ul>
+    <li><strong>Clarity:</strong> Say what you mean, and mean what you say. Avoid jargon and ambiguity.</li>
+    <li><strong>Active Listening:</strong> Listen to understand, not to reply. This builds empathy and reduces conflict.</li>
+    <li><strong>Feedback:</strong> Give feedback that builds, not breaks. When receiving feedback, focus on improvement, not defense.</li>
+    <li><strong>Nonverbal Communication:</strong> Your tone, posture, and facial expressions can speak louder than words.</li>
+</ul>
+
+<h2>Communication Mediums</h2>
+<ul>
+    <li><strong>Email:</strong> Keep it concise and professional. Use subject lines effectively.</li>
+    <li><strong>Meetings:</strong> Come prepared, stay focused, and follow up with clear action points.</li>
+    <li><strong>Chat Platforms:</strong> Maintain respect and professionalism even in informal exchanges.</li>
+</ul>
+
+<p>Mastering communication improves relationships, reduces misunderstandings, and enhances your reputation as a professional.</p>',
+        'is_published' => true,
+        'position' => 2,
+    ]
+);
+
+// 3. LESSON: Emotional Intelligence (EQ)
+$lesson3 = $proCourse->lessons()->firstOrCreate(
+    ['slug' => 'pro-emotional-intelligence'],
+    [
+        'title' => 'Mastering Emotional Intelligence (EQ)',
+        'type' => Lesson::TYPE_DEFAULT,
+        'content' => '
+<h1>Emotional Intelligence (EQ)</h1>
+<p>Emotional Intelligence is the ability to understand and manage your emotions — and those of others. Research shows EQ contributes more to career success than IQ.</p>
+
+<h2>The 5 Components of EQ</h2>
+<ol>
+    <li><strong>Self-Awareness:</strong> Recognize your emotions and their impact on your behavior.</li>
+    <li><strong>Self-Regulation:</strong> Manage impulses, stress, and reactions under pressure.</li>
+    <li><strong>Motivation:</strong> Stay driven by purpose, not emotion. Be proactive, not reactive.</li>
+    <li><strong>Empathy:</strong> Understand and relate to others’ feelings. This builds trust and influence.</li>
+    <li><strong>Social Skills:</strong> Build healthy relationships, resolve conflicts, and inspire collaboration.</li>
+</ol>
+
+<h2>Developing EQ</h2>
+<ul>
+    <li>Pause before reacting emotionally.</li>
+    <li>Practice gratitude and perspective-taking.</li>
+    <li>Be genuinely curious about others’ viewpoints.</li>
+</ul>',
+        'is_published' => true,
+        'position' => 3,
+    ]
+);
+
+// 4. LESSON: Teamwork and Collaboration
+$lesson4 = $proCourse->lessons()->firstOrCreate(
+    ['slug' => 'pro-teamwork'],
+    [
+        'title' => 'Teamwork and Collaboration',
+        'type' => Lesson::TYPE_DEFAULT,
+        'content' => '
+<h1>Teamwork and Collaboration</h1>
+<p>No matter how skilled you are, success in most organizations depends on how well you work with others.</p>
+
+<h2>Why Teamwork Matters</h2>
+<ul>
+    <li>It drives innovation through diverse perspectives.</li>
+    <li>It builds resilience — teams can achieve what individuals cannot.</li>
+    <li>It develops shared accountability and ownership of success.</li>
+</ul>
+
+<h2>Keys to Effective Collaboration</h2>
+<ul>
+    <li>Respect every voice in the room.</li>
+    <li>Disagree constructively, not destructively.</li>
+    <li>Share credit generously; take responsibility willingly.</li>
+    <li>Document decisions and ensure clarity of roles.</li>
+</ul>
+
+<p>Great teams are not those without conflict — but those that know how to resolve it wisely.</p>',
+        'is_published' => true,
+        'position' => 4,
+    ]
+);
+
+// 5. LESSON: Critical Thinking & Problem-Solving
+$lesson5 = $proCourse->lessons()->firstOrCreate(
+    ['slug' => 'pro-critical-thinking'],
+    [
+        'title' => 'Critical Thinking & Problem-Solving',
+        'type' => Lesson::TYPE_DEFAULT,
+        'content' => '
+<h1>Critical Thinking & Problem-Solving</h1>
+<p>Every organization faces challenges. The ability to think critically and solve problems makes you invaluable.</p>
+
+<h2>Steps in Problem Solving</h2>
+<ol>
+    <li>Identify the real problem, not just the symptom.</li>
+    <li>Gather relevant data and perspectives.</li>
+    <li>Generate multiple possible solutions.</li>
+    <li>Evaluate options objectively.</li>
+    <li>Take action and measure the outcome.</li>
+</ol>
+
+<h2>Barriers to Clear Thinking</h2>
+<ul>
+    <li>Bias and assumptions.</li>
+    <li>Emotional reactions clouding judgment.</li>
+    <li>Lack of data or relying on hearsay.</li>
+</ul>
+
+<p>Be curious, analytical, and courageous enough to question the obvious.</p>',
+        'is_published' => true,
+        'position' => 5,
+    ]
+);
+
+// 6. LESSON: Productivity and Time Management
+$lesson6 = $proCourse->lessons()->firstOrCreate(
+    ['slug' => 'pro-productivity'],
+    [
+        'title' => 'Personal Productivity & Time Management',
+        'type' => Lesson::TYPE_DEFAULT,
+        'content' => '
+<h1>Personal Productivity & Time Management</h1>
+<p>Time is the only truly non-renewable resource. Professionals who manage time effectively manage life effectively.</p>
+
+<h2>Core Principles</h2>
+<ul>
+    <li><strong>Prioritize:</strong> Focus on what matters most (the 80/20 rule).</li>
+    <li><strong>Plan:</strong> Use daily, weekly, and monthly planning habits.</li>
+    <li><strong>Eliminate Distractions:</strong> Guard your focus — multitasking is a myth.</li>
+    <li><strong>Rest:</strong> Productivity thrives on balance. Schedule recovery as intentionally as work.</li>
+</ul>
+
+<p>Tools such as calendars, task managers, and focus timers can multiply your effectiveness when used consistently.</p>',
+        'is_published' => true,
+        'position' => 6,
+    ]
+);
+
+// 7. LESSON: Continuous Learning and Growth
+$lesson7 = $proCourse->lessons()->firstOrCreate(
+    ['slug' => 'pro-growth'],
+    [
+        'title' => 'Continuous Learning and Growth Mindset',
+        'type' => Lesson::TYPE_DEFAULT,
+        'content' => '
+<h1>Continuous Learning and Growth Mindset</h1>
+<p>In the 21st century, the best professionals are lifelong learners. Change is constant; learning keeps you relevant.</p>
+
+<h2>Growth vs Fixed Mindset</h2>
+<ul>
+    <li><strong>Fixed Mindset:</strong> "I can’t do this" or "I’m just not good at that."</li>
+    <li><strong>Growth Mindset:</strong> "I can learn anything with time and effort."</li>
+</ul>
+
+<h2>Practices for Continuous Growth</h2>
+<ul>
+    <li>Seek feedback often.</li>
+    <li>Read widely and take short courses regularly.</li>
+    <li>Mentor others — teaching deepens your understanding.</li>
+</ul>
+
+<p>Excellence is not an act but a consistent process of refinement.</p>',
+        'is_published' => true,
+        'position' => 7,
+    ]
+);
+
+// 8. QUIZ LESSON
+$lesson8 = $proCourse->lessons()->firstOrCreate(
+    ['slug' => 'pro-quiz'],
+    [
+        'title' => 'Professional Excellence Quiz',
+        'type' => Lesson::TYPE_QUIZ,
+        'content_json' => [],
+        'is_published' => true,
+        'position' => 8,
+    ]
+);
+
+if ($lesson8->questions()->count() == 0) {
+    $q1 = $lesson8->questions()->create([
+        'question' => 'What is one key element of emotional intelligence?',
+        'type' => 'MULTIPLE_CHOICE',
+        'position' => 1,
+    ]);
+    $q1->options()->createMany([
+        ['option_text' => 'Self-Awareness', 'is_correct' => true],
+        ['option_text' => 'Ignoring Emotions', 'is_correct' => false],
+        ['option_text' => 'Reacting Immediately', 'is_correct' => false],
+    ]);
+
+    $q2 = $lesson8->questions()->create([
+        'question' => 'What is the first step in solving a problem?',
+        'type' => 'MULTIPLE_CHOICE',
+        'position' => 2,
+    ]);
+    $q2->options()->createMany([
+        ['option_text' => 'Identifying the real problem', 'is_correct' => true],
+        ['option_text' => 'Jumping to a conclusion', 'is_correct' => false],
+        ['option_text' => 'Asking someone else to solve it', 'is_correct' => false],
+    ]);
+
+    $q3 = $lesson8->questions()->create([
+        'question' => 'What mindset believes abilities can be developed?',
+        'type' => 'MULTIPLE_CHOICE',
+        'position' => 3,
+    ]);
+    $q3->options()->createMany([
+        ['option_text' => 'Growth Mindset', 'is_correct' => true],
+        ['option_text' => 'Fixed Mindset', 'is_correct' => false],
+    ]);
+
+    $q4 = $lesson8->questions()->create([
+        'question' => 'Which of these improves team collaboration?',
+        'type' => 'MULTIPLE_CHOICE',
+        'position' => 4,
+    ]);
+    $q4->options()->createMany([
+        ['option_text' => 'Respecting every voice', 'is_correct' => true],
+        ['option_text' => 'Avoiding communication', 'is_correct' => false],
+        ['option_text' => 'Taking all credit alone', 'is_correct' => false],
+    ]);
+}
+
     }
 }
 

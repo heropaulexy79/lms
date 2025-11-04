@@ -10,6 +10,12 @@ withDefaults(defineProps<{ isFullscreen: boolean }>(), {
 <template>
     <GlobalLayout>
         <OrganisationLayout :is-fullscreen="isFullscreen">
+            <!-- ✅ Add header slot support -->
+            <template #header>
+                <slot name="header" />
+            </template>
+
+            <!-- ✅ Default page body -->
             <slot />
         </OrganisationLayout>
     </GlobalLayout>
